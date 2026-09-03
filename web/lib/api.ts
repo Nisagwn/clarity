@@ -120,6 +120,9 @@ export async function apiFetch<T>(
   try {
     res = await fetch(`${API_URL}${path}`, {
       ...init,
+      // Oturum httpOnly cookie ile taşınıyor; bu olmadan tarayıcı cookie'yi
+      // farklı kaynağa göndermez ve her istek 401 döner.
+      credentials: 'include',
       headers: { Accept: 'application/json', ...init?.headers },
     })
   } catch {
@@ -213,22 +216,79 @@ export function getDupes(id: number | string, limit = 5) {
   })
 }
 
-// ===== Profiller =====
+// ===== Kimlik ve profil =====
+//
+// /profiles/:id bilinçli olarak yok: çıplak bir tam sayı alan uç nokta,
+// sayıyı artıran herkese başkasının alerjen listesini açıyordu. Kimlik
+// artık istemciden değil oturumdan geliyor.
 
-export function createProfile(body: {
-  email?: string
-  skin_type: string
+const jsonHeaders = { 'Content-Type': 'application/json' }
+
+export interface RegisterInput {
+  email: string
+  password: string
+  skin_type?: string
+  /** Alerjen verisi sağlık verisidir; bu onay olmadan kaydedilmez.
+   *  Pazarlama onayıyla ASLA paketlenmez — ayrı sorulur, ayrı saklanır. */
+  health_data_consent: boolean
+  marketing_consent: boolean
   allergens: string[]
-}) {
-  return apiFetch<UserProfile>('/profiles', {
+}
+
+export interface AuthUser {
+  id: number
+  email: string
+}
+
+export function register(body: RegisterInput) {
+  return apiFetch<AuthUser>('/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders,
     body: JSON.stringify(body),
   })
 }
 
-export function getProfile(id: number | string) {
-  return apiFetch<UserProfile>(`/profiles/${id}`, { cache: 'no-store' })
+export function login(email: string, password: string) {
+  return apiFetch<AuthUser>('/auth/login', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ email, password }),
+  })
+}
+
+export function logout() {
+  return apiFetch<{ status: string }>('/auth/logout', { method: 'POST' })
+}
+
+/** Oturumdaki kullanıcının profili. Oturum yoksa ApiError(401) fırlatır. */
+export function getMyProfile() {
+  return apiFetch<UserProfile>('/profiles/me', { cache: 'no-store' })
+}
+
+export function updateMyProfile(body: { skin_type?: string; allergens: string[] }) {
+  return apiFetch<UserProfile>('/profiles/me', {
+    method: 'PUT',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  })
+}
+
+/** Rıza verme veya geri alma. Sağlık verisi rızası geri alınırsa sunucu
+ *  alerjen kayıtlarını derhal siler. */
+export function updateConsent(consentType: 'health_data' | 'marketing', granted: boolean) {
+  return apiFetch<{ consent_type: string; granted: boolean; policy_version: string }>(
+    '/auth/consent',
+    {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ consent_type: consentType, granted }),
+    },
+  )
+}
+
+/** Silme hakkı: hesap ve ilişkili tüm veri kalıcı olarak silinir. */
+export function deleteAccount() {
+  return apiFetch<{ status: string }>('/auth/account', { method: 'DELETE' })
 }
 
 // ===== Görüntüleme yardımcıları =====

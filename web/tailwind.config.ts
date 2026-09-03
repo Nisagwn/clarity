@@ -24,9 +24,19 @@ const config: Config = {
         clay: '#d48d7b',    // terrakota
         cocoa: '#8f6344',   // kahve
         espresso: '#413014',// koyu kahve (ana metin)
-        mauve: '#93777d',   // soluk leylak-gri
-        mist: '#b2a3aa',    // pus
+        mauve: '#93777d',   // soluk leylak-gri — YALNIZCA büyük/kalın etiket
+        mist: '#b2a3aa',    // pus — yalnızca dekoratif
         sage: '#646c61',    // adaçayı
+
+        // Küçük gövde metni için: mauve beyaz üzerinde ~3,3:1 ile WCAG AA'yı
+        // geçmiyor. 14px ve altı metinde bunu kullanın.
+        'ink-muted': '#6b5645',
+
+        // Risk ölçeği anlamsal adları. Renk tek başına yeterli değil;
+        // bileşenler ayrıca sayı, ikon/şekil ve doku kullanır.
+        'risk-low': '#646c61',
+        'risk-mid': '#8f6344',
+        'risk-high': '#933d4c'
       },
       fontFamily: {
         display: ['var(--font-display)', 'Georgia', 'serif'],

@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { listProducts, getProfile, concernColor, type Product } from '@/lib/api'
+import { listProducts, getMyProfile, concernColor, type Product } from '@/lib/api'
 
 interface DetectedProduct {
   id: number
@@ -56,18 +56,17 @@ export default function UploadPage() {
         ),
       )
 
-    // Kayıtlı profilden doldur; alerjenler sayfalar arasında taşınsın.
-    const savedId = window.localStorage.getItem('beauty:profile_id')
-    if (savedId) {
-      getProfile(savedId)
-        .then((profile) => {
-          setUserAllergens(profile.allergens)
-          setAllergenText(profile.allergens.join(', '))
-        })
-        .catch(() => {
-          /* Profil isteğe bağlı; eski kimliği yok say. */
-        })
-    }
+    // Oturumdaki profilden doldur; alerjenler sayfalar arasında taşınsın.
+    // Oturum yoksa 401 döner, bu beklenen durum: giriş yapmadan da
+    // alerjen yazıp analiz yapılabilir, sadece kaydedilmez.
+    getMyProfile()
+      .then((profile) => {
+        setUserAllergens(profile.allergens)
+        setAllergenText(profile.allergens.join(', '))
+      })
+      .catch(() => {
+        /* Giriş yapılmamış; elle giriş alanı zaten var. */
+      })
   }, [])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,7 +258,7 @@ export default function UploadPage() {
       <button
         onClick={handleAnalyze}
         disabled={!preview || !productId || loading}
-        className="w-full py-3 bg-brand-400 text-white font-semibold rounded-lg hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed transition mb-12"
+        className="w-full py-3 bg-brand-500 text-white font-semibold rounded-lg hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed transition mb-12"
       >
         {loading ? 'Analiz ediliyor...' : 'İçerikleri analiz et'}
       </button>
@@ -312,7 +311,7 @@ export default function UploadPage() {
                     <div>
                       <h4 className="font-semibold">{ing.name}</h4>
                       {ing.inci_name && ing.inci_name !== ing.name && (
-                        <p className="text-sm text-mauve">{ing.inci_name}</p>
+                        <p className="text-sm text-ink-muted">{ing.inci_name}</p>
                       )}
                     </div>
                     <div className="text-right">

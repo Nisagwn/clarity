@@ -33,7 +33,7 @@ export default function IngredientCard({
             {ingredient.name}
           </Link>
           {ingredient.inci_name && ingredient.inci_name !== ingredient.name && (
-            <p className="text-sm text-mauve truncate">
+            <p className="text-sm text-ink-muted truncate">
               INCI: {ingredient.inci_name}
             </p>
           )}

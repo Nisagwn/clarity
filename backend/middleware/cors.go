@@ -23,12 +23,19 @@ func CORS(allowedOrigins string) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
+
+		// Oturum httpOnly cookie ile taşınıyor. Kimlik bilgisi taşıyan
+		// isteklerde "*" geçersizdir: tarayıcı, kaynağın tam olarak
+		// belirtilmesini şart koşar. Bu yüzden allowAll durumunda bile
+		// isteğin kendi kaynağını yansıtıyoruz.
 		switch {
-		case allowAll:
-			c.Header("Access-Control-Allow-Origin", "*")
-		case origin != "" && allowed[origin]:
+		case origin != "" && (allowAll || allowed[origin]):
 			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
 			c.Header("Vary", "Origin")
+		case allowAll:
+			// Kaynak başlığı yok (ör. curl): kimlik bilgisi de gerekmiyor.
+			c.Header("Access-Control-Allow-Origin", "*")
 		}
 
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")

@@ -72,7 +72,7 @@ export default async function ProductDetailPage({
 
       <section className="mb-12">
         <h2 className="text-2xl font-bold mb-4">İçerik dökümü</h2>
-        <p className="text-sm text-mauve mb-4">
+        <p className="text-sm text-ink-muted mb-4">
           INCI sırasına göre listelenir — üstteki içerikler en yüksek oranda
           bulunanlardır.
         </p>
@@ -92,7 +92,7 @@ export default async function ProductDetailPage({
       {dupes.length > 0 && (
         <section>
           <h2 className="text-2xl font-bold mb-2">Muadiller ve alternatifler</h2>
-          <p className="text-sm text-mauve mb-4">
+          <p className="text-sm text-ink-muted mb-4">
             Bu ürünle içerik listesini ne kadar paylaştıklarına göre sıralandı.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">

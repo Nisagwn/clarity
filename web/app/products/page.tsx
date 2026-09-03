@@ -42,7 +42,7 @@ export default async function ProductsPage({
         />
         <button
           type="submit"
-          className="px-5 py-2 bg-brand-400 text-white font-semibold rounded-lg hover:bg-brand-500 transition"
+          className="px-5 py-2 bg-brand-500 text-white font-semibold rounded-lg hover:bg-brand-600 transition"
         >
           Ara
         </button>
@@ -58,7 +58,7 @@ export default async function ProductsPage({
         </div>
       ) : (
         <>
-          <p className="text-sm text-mauve mb-4">{total} ürün</p>
+          <p className="text-sm text-ink-muted mb-4">{total} ürün</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {products.map((p) => (
               <Link

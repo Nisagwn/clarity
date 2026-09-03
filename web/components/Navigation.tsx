@@ -43,7 +43,7 @@ export default function Navigation() {
           ))}
           <Link
             href="/profile"
-            className="px-4 py-2 bg-brand-400 text-white rounded-lg hover:bg-brand-500 transition"
+            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition"
           >
             Profilim
           </Link>
@@ -78,7 +78,7 @@ export default function Navigation() {
             ))}
             <Link
               href="/profile"
-              className="block mt-2 px-4 py-2 bg-brand-400 text-white rounded-lg text-center"
+              className="block mt-2 px-4 py-2 bg-brand-500 text-white rounded-lg text-center"
               onClick={() => setIsOpen(false)}
             >
               Profilim

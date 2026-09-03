@@ -134,7 +134,7 @@ export default async function IngredientsPage({
         <div className="flex gap-3">
           <button
             type="submit"
-            className="px-5 py-2 bg-brand-400 text-white font-semibold rounded-lg hover:bg-brand-500 transition"
+            className="px-5 py-2 bg-brand-500 text-white font-semibold rounded-lg hover:bg-brand-600 transition"
           >
             Filtreleri uygula
           </button>
@@ -155,7 +155,7 @@ export default async function IngredientsPage({
         </div>
       ) : (
         <>
-          <p className="text-sm text-mauve mb-4">
+          <p className="text-sm text-ink-muted mb-4">
             Filtrelerine {total} içerik uyuyor
             {ingredients.length < total &&
               ` (ilk ${ingredients.length} tanesi gösteriliyor)`}

@@ -10,6 +10,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/nisa/beauty-ingredient/middleware"
 )
 
 // Server, tüm işleyicilerin paylaştığı bağımlılıkları taşır.
@@ -43,10 +45,25 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 	// Öneriler
 	r.POST("/recommendations", s.GetRecommendations)
 
-	// Kullanıcı profilleri
-	r.POST("/profiles", s.CreateProfile)
-	r.GET("/profiles/:id", s.GetProfile)
-	r.PUT("/profiles/:id", s.UpdateProfile)
+	// Kimlik doğrulama
+	r.POST("/auth/register", s.Register)
+	r.POST("/auth/login", s.Login)
+	r.POST("/auth/logout", s.Logout)
+
+	// Kullanıcı profilleri — hepsi oturum gerektirir.
+	//
+	// /profiles/:id bilinçli olarak yok: çıplak bir tam sayı alan uç nokta,
+	// sayıyı artıran herkese başkasının alerjen listesini açıyordu. Kimliği
+	// istemciden almak yerine oturumdan almak, sahiplik kontrolünü unutmayı
+	// yapısal olarak imkânsız kılar.
+	authed := r.Group("/", middleware.RequireAuth())
+	{
+		authed.GET("profiles/me", s.GetMyProfile)
+		authed.PUT("profiles/me", s.UpdateMyProfile)
+		authed.GET("profiles/me/export", s.ExportData)
+		authed.POST("auth/consent", s.UpdateConsent)
+		authed.DELETE("auth/account", s.DeleteAccount)
+	}
 }
 
 // Health, servisin ve veritabanının ayakta olup olmadığını bildirir.

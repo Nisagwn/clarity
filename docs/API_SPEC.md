@@ -22,51 +22,87 @@ Veritabanına ulaşılamıyorsa `503` ve `{"status":"degraded","database":"unrea
 
 ---
 
+## Kimlik doğrulama
+
+Oturum, **httpOnly + SameSite=Lax** bir cookie'de taşınan JWT ile tutulur.
+Tarayıcıdan yapılan her istek `credentials: 'include'` göndermelidir.
+
+Alerjen listesi hem KVKK m.6'da "özel nitelikli kişisel veri" hem GDPR m.9'da
+"special category data" — yani sağlık verisi. Bu yüzden **açık rıza zorunlu**
+ve rızanın kanıtı `consent_log` tablosunda tutulur.
+
+### Kayıt
+```
+POST /auth/register
+{
+  "email": "kullanici@ornek.com",
+  "password": "en az 10 karakter",
+  "skin_type": "sensitive",
+  "health_data_consent": true,
+  "marketing_consent": false,
+  "allergens": ["parfüm", "nikel"]
+}
+
+Yanıt 201: { "id": 1, "email": "kullanici@ornek.com" }
+```
+`health_data_consent` false iken `allergens` gönderilirse **400** döner:
+alerjen verisi açık rıza olmadan kaydedilemez. İki rıza ayrı alanlardır ve
+asla birlikte sorulmaz.
+
+### Giriş / çıkış
+```
+POST /auth/login    { "email": "...", "password": "..." }   -> 200
+POST /auth/logout                                            -> 200
+```
+Olmayan hesap ile yanlış parola **aynı** yanıtı verir (401, aynı mesaj):
+aksi halde uç nokta hangi e-postaların kayıtlı olduğunu sızdırırdı.
+
+### Rıza güncelleme
+```
+POST /auth/consent   { "consent_type": "health_data", "granted": false }
+```
+Sağlık verisi rızası geri alınırsa alerjen kayıtları **derhal silinir**.
+
+### Hesap silme (silme hakkı)
+```
+DELETE /auth/account   -> 200
+```
+Hesap ve ilişkili tüm veri kalıcı olarak silinir; işaretleme değil.
+
+---
+
 ## Kullanıcı profilleri
 
-### Profil oluştur
-```
-POST /profiles
-Content-Type: application/json
+**`/profiles/:id` bilinçli olarak yoktur.** Çıplak bir tam sayı alan uç nokta,
+sayıyı artıran herkese başkasının alerjen listesini açıyordu. Kimlik artık
+istemciden değil oturumdan gelir; sahiplik kontrolünü unutmak yapısal olarak
+imkânsızdır.
 
-{
-  "email": "kullanici@ornek.com",
-  "skin_type": "sensitive",
-  "allergens": ["nikel", "formaldehit"]
-}
-
-Yanıt 201:
-{
-  "id": 1,
-  "email": "kullanici@ornek.com",
-  "skin_type": "sensitive",
-  "allergens": ["nikel", "formaldehit"],
-  "created_at": "2026-09-03T10:30:00Z"
-}
+### Profilim
 ```
-Alerjenler kırpılır, küçük harfe çevrilir ve tekilleştirilir.
-Aynı e-posta ikinci kez gönderilirse `409`.
-
-### Profil getir
-```
-GET /profiles/:id
+GET /profiles/me
 
 Yanıt 200:
 {
   "id": 1,
   "email": "kullanici@ornek.com",
   "skin_type": "sensitive",
-  "allergens": ["nikel", "formaldehit"],
+  "allergens": ["parfüm", "nikel"],
   "created_at": "2026-09-03T10:30:00Z"
 }
 ```
+Oturum yoksa **401**.
 
-### Profil güncelle
+### Profilimi güncelle
 ```
-PUT /profiles/:id
-{ "skin_type": "dry", "allergens": ["parfüm"] }
+PUT /profiles/me   { "skin_type": "dry", "allergens": ["parfüm"] }
 ```
-Alerjen listesinin tamamını değiştirir.
+Geçerli bir sağlık verisi rızası yoksa alerjen yazmak **403** döner.
+
+### Verilerimi dışa aktar (taşınabilirlik)
+```
+GET /profiles/me/export   -> profil + rıza geçmişi, JSON dosyası olarak
+```
 
 ---
 
@@ -247,10 +283,17 @@ Yanıt 200:
 }
 ```
 
-> **Bilinen sorun.** Eşleştirme şu an iki yönlü alt dize karşılaştırmasıyla
-> yapılıyor ve yanlış pozitif üretebiliyor: `alkol` arayan bir kullanıcı
-> "yün alkolü" yüzünden Lanolin için uyarı alıyor. Bkz.
-> [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) P0-1.
+Eşleştirme **tam eşleşmeyle** yapılır: hem kullanıcının girdisi hem
+içeriğin alerjen adı `allergen_alias` sözlüğünden kanonik alerjene
+çözülür. Alt dize karşılaştırması kullanılmaz — "alkol" arayan
+kullanıcıyı "yün alkolü" yüzünden Lanolin'e takıyordu.
+
+Koku alerjenleri AB Tüzüğü 1223/2009 Ek III'ten gelir ve her kanonik
+kayıt mevzuat atfı taşır.
+
+Tanınmayan terimler `unmatched_terms` alanında bildirilir ve
+`suggestions` ile yakın yazılış önerilir. Sessiz sıfır eşleşme,
+kullanıcının korunduğunu sanması demektir.
 
 ---
 

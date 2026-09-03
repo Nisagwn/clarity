@@ -30,7 +30,7 @@ export default async function HomePage() {
           <div className="flex flex-wrap gap-3 mt-7">
             <Link
               href="/upload"
-              className="px-6 py-3 bg-brand-400 text-white font-semibold rounded-lg hover:bg-brand-500 transition"
+              className="px-6 py-3 bg-brand-500 text-white font-semibold rounded-lg hover:bg-brand-600 transition"
             >
               Ürün analiz et
             </Link>
