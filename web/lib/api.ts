@@ -55,6 +55,11 @@ export interface AllergenCheckResult {
   matches: AllergenMatch[]
   safe: boolean
   flags: string[]
+  /** Sozlukte karsiligi bulunamayan kullanici terimleri. Bunlari gostermek
+   *  zorunlu: sessiz sifir eslesme, kullanicinin korundugunu sanmasi demek. */
+  unmatched_terms: string[]
+  /** Tanınmayan her terim icin yakin yazilis onerileri. */
+  suggestions: Record<string, string[]>
 }
 
 export interface Recommendation {

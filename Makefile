@@ -1,7 +1,9 @@
-.PHONY: help setup up down backend frontend db db-reset db-shell seed test lint build clean
+.PHONY: help setup up down backend frontend migrate migrate-down migrate-version db-reset db-shell seed test test-db-up test-db-down lint build clean
 
 # Veritabanı Docker'da çalışır; yerel PostgreSQL kurulumuna gerek yoktur.
-COMPOSE := docker compose
+COMPOSE      := docker compose
+COMPOSE_TEST := docker compose -f docker-compose.test.yml
+TEST_DSN     := postgres://beauty:beauty@localhost:5434/beauty_test?sslmode=disable
 PSQL    := $(COMPOSE) exec -T postgres psql -U beauty -d beauty_ingredient
 
 help:
@@ -12,6 +14,8 @@ help:
 	@echo "make down       - PostgreSQL'i durdur"
 	@echo "make backend    - Go API'yi çalıştır  (http://localhost:8090)"
 	@echo "make frontend   - Next.js uygulamasını çalıştır (http://localhost:3001)"
+	@echo "make migrate    - Bekleyen şema göçlerini uygula"
+	@echo "make migrate-down - Son göçü geri al"
 	@echo "make db-shell   - Konteynerde psql kabuğu aç"
 	@echo "make db-reset   - Volume'ü sil, şemayı ve örnek veriyi yeniden yükle (DİKKAT)"
 	@echo "make seed       - Örnek veriyi yeniden uygula (idempotent)"
@@ -33,6 +37,7 @@ up:
 	@echo "PostgreSQL'in bağlantı kabul etmesi bekleniyor..."
 	@$(COMPOSE) exec -T postgres sh -c 'until pg_isready -U beauty -d beauty_ingredient >/dev/null 2>&1; do sleep 1; done'
 	@echo "Veritabanı hazır: localhost:5433"
+	$(MAKE) migrate
 
 down:
 	$(COMPOSE) down
@@ -45,22 +50,39 @@ frontend:
 	@echo "Web uygulaması başlatılıyor: http://localhost:3001 ..."
 	cd web && npm run dev
 
+migrate:
+	cd backend && go run ./cmd/migrate up
+
+migrate-down:
+	cd backend && go run ./cmd/migrate down
+
+migrate-version:
+	cd backend && go run ./cmd/migrate version
+
 db-shell:
 	$(COMPOSE) exec postgres psql -U beauty -d beauty_ingredient
 
-# Şema ve örnek veri yalnızca volume ilk oluşturulduğunda çalışır; bu yüzden
-# sıfırlamak volume'ü silmek demektir.
+# Göçler sayesinde şema değiştirmek için artık sıfırlama gerekmiyor;
+# bu hedef yalnızca temiz bir başlangıç istendiğinde kullanılır.
 db-reset:
 	@echo "DİKKAT: veritabanı volume'ü ve içindeki tüm veri siliniyor..."
 	$(COMPOSE) down -v
 	$(MAKE) up
+	$(MAKE) seed
 
 seed:
 	$(PSQL) < backend/db/seed.sql
 	@echo "Örnek veri uygulandı"
 
-test:
-	cd backend && go test ./...
+test: test-db-up
+	cd backend && TEST_DATABASE_URL=$(TEST_DSN) go test ./... -count=1
+
+test-db-up:
+	$(COMPOSE_TEST) up -d
+	@$(COMPOSE_TEST) exec -T postgres-test sh -c 'until pg_isready -U beauty -d beauty_test >/dev/null 2>&1; do sleep 1; done'
+
+test-db-down:
+	$(COMPOSE_TEST) down
 
 lint:
 	cd backend && go vet ./...

@@ -1,0 +1,20 @@
+# Testler için ayrı veritabanı. Geliştirme veritabanına (5433) dokunmaz;
+# testler tabloları temizlediği için ikisinin karışması veri kaybı olurdu.
+# Kalıcı volume yok: konteyner durunca veri gider, bu istenen davranış.
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: beauty-postgres-test
+    environment:
+      POSTGRES_USER: beauty
+      POSTGRES_PASSWORD: beauty
+      POSTGRES_DB: beauty_test
+    ports:
+      - "5434:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beauty -d beauty_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 15

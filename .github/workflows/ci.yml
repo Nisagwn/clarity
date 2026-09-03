@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (Go)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: beauty
+          POSTGRES_PASSWORD: beauty
+          POSTGRES_DB: beauty_test
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U beauty -d beauty_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: backend/go.sum
+
+      - name: Bağımlılıkları indir
+        working-directory: backend
+        run: go mod download
+
+      - name: Biçim kontrolü
+        working-directory: backend
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Biçimlendirilmemiş dosyalar:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        working-directory: backend
+        run: go vet ./...
+
+      - name: Testler
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgres://beauty:beauty@localhost:5434/beauty_test?sslmode=disable
+        run: go test ./... -count=1
+
+      - name: Göçler ileri ve geri çalışıyor mu
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://beauty:beauty@localhost:5434/beauty_test?sslmode=disable
+        run: |
+          go run ./cmd/migrate down-all
+          go run ./cmd/migrate up
+          go run ./cmd/migrate down-all
+
+  frontend:
+    name: Ön yüz (Next.js)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Bağımlılıkları kur
+        working-directory: web
+        run: npm ci
+
+      - name: Tip kontrolü
+        working-directory: web
+        run: npx tsc --noEmit
+
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+
+      - name: Derleme
+        working-directory: web
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8090
+        run: npm run build
+
+  secrets:
+    name: Sızmış anahtar taraması
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

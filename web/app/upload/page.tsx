@@ -27,6 +27,8 @@ interface IngredientsResult {
   userMatches: {
     flaggedAllergens: string[]
     safeAlternatives: string[]
+    unmatchedTerms: string[]
+    suggestions: Record<string, string[]>
   }
 }
 
@@ -362,6 +364,29 @@ export default function UploadPage() {
                     ? 'Bu ürünü kendi alerjenlerine karşı kontrol etmek için yukarıya ekle.'
                     : 'Listelediğin alerjenlerin hiçbiri bu üründe bulunmuyor.'}
                 </p>
+              </div>
+            )}
+            {result.userMatches.unmatchedTerms.length > 0 && (
+              <div
+                role="alert"
+                className="mb-4 p-4 bg-clay/10 border border-clay/40 rounded-lg"
+              >
+                <h3 className="font-semibold text-cocoa mb-2">
+                  Bu terimleri tanıyamadık
+                </h3>
+                <p className="text-sm text-cocoa mb-2">
+                  Şunlar alerjen listemizde bulunamadı, dolayısıyla bu ürüne
+                  karşı <strong>kontrol edilmediler</strong>:{' '}
+                  {result.userMatches.unmatchedTerms.join(', ')}
+                </p>
+                {Object.entries(result.userMatches.suggestions).map(
+                  ([term, options]) => (
+                    <p key={term} className="text-sm text-cocoa">
+                      “{term}” için şunu mu demek istediniz:{' '}
+                      <strong>{options.join(', ')}</strong>?
+                    </p>
+                  ),
+                )}
               </div>
             )}
             {result.userMatches.safeAlternatives.length > 0 && (

@@ -110,6 +110,10 @@ export async function POST(request: Request) {
           (m) => `${m.ingredient} (${m.allergen})`,
         ),
         safeAlternatives,
+        // Tanınmayan terimler kullanıcıya gösterilmek zorunda: bir alerjeni
+        // yanlış yazan kişi hiç uyarı almazsa ürünü güvenli sanır.
+        unmatchedTerms: check.unmatched_terms ?? [],
+        suggestions: check.suggestions ?? {},
       },
     })
   } catch (err) {

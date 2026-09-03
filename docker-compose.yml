@@ -12,9 +12,9 @@ services:
       - "5433:5432"
     volumes:
       - beauty-pgdata:/var/lib/postgresql/data
-      # Buradaki dosyalar, volume ilk oluşturulduğunda ad sırasıyla bir kez çalışır.
-      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      # Şema artık initdb ile değil, göçlerle yükleniyor: `make migrate`.
+      # initdb yalnızca volume ilk oluşturulduğunda çalıştığı için şema
+      # değiştirmenin tek yolu tüm veriyi silmekti.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U beauty -d beauty_ingredient"]
       interval: 5s

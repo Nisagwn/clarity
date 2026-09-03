@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -80,9 +81,14 @@ func (s *Server) ListIngredients(c *gin.Context) {
 				"WHERE s2.ingredient_id = i.id AND s2.skin_type IN (%s, 'all'))", arg(skinType)))
 	}
 	if len(avoid) > 0 {
+		// Kaçınılacak alerjenler de kanonik sözlükten çözülür; böylece "koku"
+		// yazan kullanıcı için Parfüm ve Linalool birlikte elenir.
 		where = append(where, fmt.Sprintf(
-			"NOT EXISTS (SELECT 1 FROM ingredient_allergens a2 "+
-				"WHERE a2.ingredient_id = i.id AND LOWER(a2.allergen_name) = ANY(%s))", arg(pq.Array(avoid))))
+			"NOT EXISTS ("+
+				"SELECT 1 FROM ingredient_allergens a2 "+
+				"JOIN allergen_alias ing_alias ON LOWER(ing_alias.alias) = LOWER(a2.allergen_name) "+
+				"JOIN allergen_alias user_alias ON user_alias.canonical_id = ing_alias.canonical_id "+
+				"WHERE a2.ingredient_id = i.id AND LOWER(user_alias.alias) = ANY(%s))", arg(pq.Array(avoid))))
 	}
 	if c.Query("max_concern") != "" {
 		where = append(where, fmt.Sprintf("COALESCE(i.concern_level, 0) <= %s", arg(intQuery(c, "max_concern", 10, 10))))
@@ -210,24 +216,26 @@ func (s *Server) AllergenCheck(c *gin.Context) {
 
 	matches := []models.AllergenMatch{}
 	if len(normalized) > 0 {
-		// İki yönlü alt dize eşleşmesi: "parfüm" arayan "parfüm karışımı"nı da,
-		// tersi de yakalansın diye. NOT: bu yaklaşım yanlış pozitif üretebilir
-		// (örn. "alkol" arayanın "yün alkolü"ne takılması);
-		// docs/DEVELOPMENT_PLAN.md P0-1 bunu ele alır.
+		// Kullanıcının girdisi ve içeriğin alerjen adı AYNI sözlükten tam
+		// eşleşmeyle çözülür. Alt dize karşılaştırması bilinçli olarak
+		// kullanılmıyor: "alkol" arayan kullanıcıyı alerjeni "yün alkolü"
+		// kayıtlı Lanolin'e takıyordu. Yanlış uyarı, kaçırılan uyarı kadar
+		// zararlıdır.
 		const query = `
-			SELECT DISTINCT ia.allergen_name,
+			SELECT DISTINCT ac.name,
 			                i.name,
 			                COALESCE(ia.severity, 0),
 			                COALESCE(i.concern_level, 0)
 			FROM product_ingredients pi
 			JOIN ingredients i ON i.id = pi.ingredient_id
 			JOIN ingredient_allergens ia ON ia.ingredient_id = i.id
+			-- İçeriğin alerjen adını kanonik alerjene çöz
+			JOIN allergen_alias ing_alias ON LOWER(ing_alias.alias) = LOWER(ia.allergen_name)
+			JOIN allergen_canonical ac ON ac.id = ing_alias.canonical_id
+			-- Kullanıcının terimlerini aynı sözlükten çöz ve kanonik üzerinden eşleştir
+			JOIN allergen_alias user_alias ON user_alias.canonical_id = ac.id
 			WHERE pi.product_id = $1
-			  AND EXISTS (
-			      SELECT 1 FROM UNNEST($2::text[]) AS ua(term)
-			      WHERE LOWER(ia.allergen_name) LIKE '%' || ua.term || '%'
-			         OR ua.term LIKE '%' || LOWER(ia.allergen_name) || '%'
-			  )
+			  AND LOWER(user_alias.alias) = ANY($2::text[])
 			ORDER BY 3 DESC`
 
 		rows, err := s.DB.QueryContext(ctx, query, req.ProductID, pq.Array(normalized))
@@ -251,6 +259,13 @@ func (s *Server) AllergenCheck(c *gin.Context) {
 		}
 	}
 
+	// Tanınmayan terimler sessizce yutulmaz: kullanıcı korunduğunu sanmamalı.
+	unmatched, suggestions, err := s.unresolvedTerms(ctx, normalized)
+	if err != nil {
+		serverError(c, err)
+		return
+	}
+
 	flags := []string{}
 	seen := map[string]bool{}
 	for _, m := range matches {
@@ -261,10 +276,83 @@ func (s *Server) AllergenCheck(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"product_id":   req.ProductID,
-		"product_name": productName,
-		"matches":      matches,
-		"safe":         len(matches) == 0,
-		"flags":        flags,
+		"product_id":      req.ProductID,
+		"product_name":    productName,
+		"matches":         matches,
+		"safe":            len(matches) == 0,
+		"flags":           flags,
+		"unmatched_terms": unmatched,
+		"suggestions":     suggestions,
 	})
+}
+
+// unresolvedTerms, kullanıcının girdiği ama sözlükte karşılığı olmayan
+// terimleri ve her biri için yakın yazılış önerilerini döndürür.
+//
+// Bu sessiz kalmamalı: eşleşmeyen bir terim, kullanıcının korunduğunu sanması
+// demektir. "kokuu" yazan biri hiçbir uyarı almazsa ürünü güvenli sanır.
+func (s *Server) unresolvedTerms(ctx context.Context, terms []string) ([]string, map[string][]string, error) {
+	unmatched := []string{}
+	suggestions := map[string][]string{}
+
+	if len(terms) == 0 {
+		return unmatched, suggestions, nil
+	}
+
+	// Hangi terimler sözlükte yok?
+	const missingQuery = `
+		SELECT t.term
+		FROM UNNEST($1::text[]) AS t(term)
+		WHERE NOT EXISTS (
+		    SELECT 1 FROM allergen_alias a WHERE LOWER(a.alias) = t.term
+		)`
+
+	rows, err := s.DB.QueryContext(ctx, missingQuery, pq.Array(terms))
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var term string
+		if err := rows.Scan(&term); err != nil {
+			return nil, nil, err
+		}
+		unmatched = append(unmatched, term)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	// Her eşleşmeyen terim için yakın yazılışlar. pg_trgm yoksa bu adım
+	// sessizce atlanır: öneri bir kolaylık, uyarının kendisi değil.
+	for _, term := range unmatched {
+		const suggestQuery = `
+			SELECT DISTINCT c.name
+			FROM allergen_alias a
+			JOIN allergen_canonical c ON c.id = a.canonical_id
+			WHERE similarity(LOWER(a.alias), $1) > 0.4
+			ORDER BY 1
+			LIMIT 3`
+
+		sRows, err := s.DB.QueryContext(ctx, suggestQuery, term)
+		if err != nil {
+			continue // pg_trgm kurulu değil; öneri veremiyoruz ama uyarı duruyor
+		}
+
+		names := []string{}
+		for sRows.Next() {
+			var name string
+			if err := sRows.Scan(&name); err == nil {
+				names = append(names, name)
+			}
+		}
+		sRows.Close()
+
+		if len(names) > 0 {
+			suggestions[term] = names
+		}
+	}
+
+	return unmatched, suggestions, nil
 }
