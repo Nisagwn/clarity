@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: beauty-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: beauty
+      POSTGRES_PASSWORD: beauty
+      POSTGRES_DB: beauty_ingredient
+    ports:
+      # Hostta 5433; böylece yerel bir PostgreSQL 5432'de çalışmaya devam edebilir.
+      - "5433:5432"
+    volumes:
+      - beauty-pgdata:/var/lib/postgresql/data
+      # Buradaki dosyalar, volume ilk oluşturulduğunda ad sırasıyla bir kez çalışır.
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beauty -d beauty_ingredient"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  beauty-pgdata:

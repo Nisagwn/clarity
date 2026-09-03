@@ -1,0 +1,46 @@
+# Ortam değişkenleri — gerçek değerler asla commit edilmez
+.env
+.env.local
+.env.*.local
+
+# Backend (Go)
+backend/bin/
+backend/*.out
+backend/main
+backend/api.exe
+
+# Ön yüz (Next.js)
+web/.next/
+web/out/
+web/dist/
+web/node_modules/
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/tsconfig.tsbuildinfo
+next-env.d.ts
+
+# Editör / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# İşletim sistemi
+.DS_Store
+Thumbs.db
+
+# Veritabanı
+*.db
+*.sqlite
+*.sqlite3
+dump.sql
+
+# Loglar
+*.log
+logs/
+
+# Bağımlılıklar
+vendor/
+node_modules/

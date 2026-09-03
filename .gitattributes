@@ -1,0 +1,8 @@
+# Depoda LF, çalışma kopyasında platformun yerel satır sonu
+* text=auto eol=lf
+
+# İkili dosyalar dönüştürülmez
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.ico binary

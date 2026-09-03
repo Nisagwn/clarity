@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #fdf8f8; /* ipeksi sütlü pudra */
+  color: #413014; /* koyu kahve */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Özel kaydırma çubuğu */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f9ecec;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c16978;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #933d4c;
+}
+
+/* Degradeler */
+.gradient-primary {
+  background: linear-gradient(135deg, #e98b96 0%, #933d4c 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #c16978 0%, #933d4c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Odak durumu klavye kullanıcıları için her zaman görünür olmalı */
+:focus-visible {
+  outline: 2px solid #933d4c;
+  outline-offset: 2px;
+}

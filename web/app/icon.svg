@@ -1,0 +1,17 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arka Plan: İpeksi Sütlü Pudra -->
+  <rect width="64" height="64" rx="16" fill="#FDF8F8" stroke="#FCE7E9" stroke-width="1"/>
+
+  <!-- Dış Kimyasal Yörünge / İnce Halka (Silik Soft Pembe Çizgi) -->
+  <circle cx="32" cy="34" r="18" stroke="#F4B8C1" stroke-width="1.2" stroke-dasharray="3 3"/>
+  
+  <!-- Aktif Molekül Noktası (Yumuşak Gül Kurusu) -->
+  <circle cx="45" cy="22" r="2.8" fill="#E898A5"/>
+
+  <!-- Merkezdeki Serum/Kozmetik Damlası (Zarif Mat Pudra Gül) -->
+  <path d="M32 16 C32 16 21 28 21 35 C21 41.075 25.925 46 32 46 C38.075 46 43 41.075 43 35 C43 28 32 16 32 16 Z" 
+        fill="#D47A88"/>
+
+  <!-- İç Damla Işıltısı (Pastel Işık Parıltısı) -->
+  <path d="M28 30 C26 33 26 37 28 40" stroke="#FFF0F2" stroke-width="2" stroke-linecap="round"/>
+</svg>
