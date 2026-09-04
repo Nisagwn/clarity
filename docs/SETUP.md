@@ -18,8 +18,15 @@ Veritabanı Docker'da çalışır; yerel bir PostgreSQL kurmanıza gerek yoktur.
 docker compose up -d
 ```
 
-Bu komut PostgreSQL 16'yı başlatır ve volume ilk oluşturulduğunda
-`backend/db/schema.sql` ile `backend/db/seed.sql` dosyalarını sırayla çalıştırır.
+Bu komut PostgreSQL 16'yı başlatır. Şema **göçlerle** yüklenir:
+
+```bash
+make migrate          # bekleyen göçleri uygular
+make seed             # örnek veriyi yükler (idempotent)
+make migrate-version  # mevcut şema sürümü
+```
+
+`make up` zaten göçleri de çalıştırır.
 
 ```bash
 # Bağlantıyı test et
@@ -30,11 +37,9 @@ docker compose exec postgres psql -U beauty -d beauty_ingredient \
 make db-shell
 ```
 
-Şemayı değiştirdiyseniz, yeniden yüklemek için volume'ü silmeniz gerekir:
-
-```bash
-make db-reset   # DİKKAT: tüm veriyi siler
-```
+Şema değiştirmek için artık veri silmeye gerek yok: yeni bir göç dosyası
+ekleyip `make migrate` çalıştırın. `make db-reset` yalnızca tamamen temiz bir
+başlangıç istediğinizde.
 
 ---
 
@@ -60,13 +65,16 @@ backend/
 │   └── recommendations.go
 ├── models/          Paylaşılan alan tipleri
 ├── middleware/      CORS
-└── db/              schema.sql, seed.sql
+├── cmd/migrate/     Göç komutu
+└── db/
+    ├── migrations/  Sıralı şema göçleri
+    └── seed.sql     Örnek veri
 ```
 
 ### Ortam değişkenleri
 
 ```bash
-DATABASE_URL=postgres://beauty:beauty@localhost:5433/beauty_ingredient?sslmode=disable
+DATABASE_URL=postgres://beauty:beauty@127.0.0.1:5433/beauty_ingredient?sslmode=disable
 PORT=8090
 GIN_MODE=debug
 CORS_ALLOWED_ORIGINS=http://localhost:3001,http://localhost:3000
@@ -100,7 +108,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8090
 | `/ingredients/[id]` | Tek içerik detayı |
 | `/products` | Ürün kataloğu |
 | `/products/[id]` | İçerikler ve muadillerle ürün detayı |
-| `/profile` | Cilt profili (tarayıcıda saklanır) |
+| `/profile` | Hesap, cilt profili ve rıza yönetimi |
 | `/about` | Yöntem ve sorumluluk reddi |
 | `/api/analyze-makeup` | Yükleme akışını besleyen rota |
 
@@ -197,10 +205,22 @@ Backend çalışmıyor. `make backend` ile başlatın ve
 PostgreSQL ayakta değil. `docker compose up -d` çalıştırın; `docker ps` ile
 `beauty-postgres` konteynerinin `healthy` olduğunu görün.
 
+**Konteyner `healthy` ama bağlantı yine de kopuyor (`wsarecv: An existing
+connection was forcibly closed`).**
+Windows'ta `localhost` IPv6 `::1` adresine çözülüyor, Docker'ın port eşlemesi
+ise IPv4'te dinliyor. Bu yüzden DSN'de **`127.0.0.1` kullanılıyor, `localhost`
+değil**. `.env` dosyanızda `@localhost:5433` yazıyorsa `@127.0.0.1:5433` yapın.
+
+Belirtisi kafa karıştırıcı: backend başlarken ölür ama port bir süre
+"LISTENING" görünmeye devam eder, yani site açılmıyor ama port doluymuş gibi
+durur. `netstat -ano | grep 8090` ile kalan ölü dinleyiciyi bulup
+sonlandırmanız gerekebilir.
+
 **Port zaten kullanımda.**
 3001 ve 8090 seçildi çünkü 3000 ve 8080 sık sık başka servisler tarafından
 tutuluyor. Değiştirmek için `backend/.env`, `web/.env.local` ve
 `web/package.json` dosyalarını güncelleyin.
 
-**Şemayı değiştirdim ama hiçbir şey olmadı.**
-`schema.sql` yalnızca volume ilk oluşturulduğunda çalışır. `make db-reset`.
+**Yeni göç yazdım ama uygulanmadı.**
+`make migrate` çalıştırın. Göçler sunucu başlangıcında otomatik çalışmaz:
+birden fazla örnek aynı anda açıldığında yarış oluşurdu.

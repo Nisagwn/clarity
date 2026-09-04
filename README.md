@@ -14,8 +14,8 @@ Go + Next.js + PostgreSQL.
 ### Çalıştırma
 
 ```bash
-# 1. Veritabanı: PostgreSQL'i başlatır, şema ve örnek veriyi otomatik yükler
-docker compose up -d
+# 1. Veritabanı + şema göçleri + örnek veri
+make up && make seed
 
 # 2. Backend
 cd backend
@@ -38,7 +38,7 @@ Make ile: önce `make setup`, sonra iki ayrı terminalde `make backend` ve
 |------------|------------------------------|
 | Web        | http://localhost:3001        |
 | API        | http://localhost:8090        |
-| PostgreSQL | `localhost:5433`             |
+| PostgreSQL | `127.0.0.1:5433` (localhost değil — bkz. SETUP) |
 
 3000 ve 8080 portları bilinçli olarak kullanılmadı; böylece proje makinedeki
 diğer servislerle birlikte çalışabiliyor. Değiştirmek isterseniz
@@ -61,8 +61,9 @@ beauty-ingredient-mvp/
 │   ├── api/                 İşleyiciler: ürün, içerik, profil, muadil
 │   ├── models/              Paylaşılan alan tipleri
 │   ├── middleware/          CORS
+│   ├── cmd/migrate/         Göç komutu
 │   └── db/
-│       ├── schema.sql       Tablolar ve indeksler
+│       ├── migrations/      Sıralı şema göçleri
 │       └── seed.sql         37 içerik, 14 örnek ürün
 ├── web/
 │   ├── app/                 App Router sayfaları
@@ -70,7 +71,7 @@ beauty-ingredient-mvp/
 │   │   ├── upload/          Fotoğraf yükleme + elle ürün eşleştirme
 │   │   ├── ingredients/     Filtreli kaşif ve detay sayfaları
 │   │   ├── products/        Katalog ve muadilli detay
-│   │   ├── profile/         Cilt profili (tarayıcıda saklanır)
+│   │   ├── profile/         Hesap, cilt profili ve rıza
 │   │   └── api/             Yükleme akışını besleyen rota
 │   ├── components/          Navigation, IngredientCard
 │   ├── public/              logo.svg, hero-lilies.jpg
@@ -82,7 +83,7 @@ beauty-ingredient-mvp/
 
 ## Özellikler (Faz 1 MVP)
 
-- ✅ EWG tarzı risk seviyeleri, faydalar ve alerjenlerle içerik kataloğu
+- ✅ Mevzuata bağlı risk seviyeleri (AB Tüzüğü 1223/2009 Ekleri)
 - ✅ Cilt tipi, kaçınılacak alerjenler ve en yüksek risk seviyesine göre filtre
 - ✅ INCI sırasına göre tam içerik dökümlü ürün kataloğu
 - ✅ Kayıtlı profile karşı alerjen kontrolü
@@ -117,8 +118,8 @@ içinden sıralı seçildi: **adaçayı** (düşük) → **terrakota** (orta) �
 
 ## Örnek Veri
 
-`backend/db/seed.sql` **gerçek içerikler** (doğru INCI adları, geleneksel EWG
-risk seviyeleri) ama **kurgusal ürünler** barındırır — uydurma marka adları
+`backend/db/seed.sql` **gerçek içerikler** (doğru INCI adları) ama
+**kurgusal ürünler** barındırır — uydurma marka adları
 altında, böylece gerçekten satın alabileceğiniz hiçbir ürün yanlış tanıtılmaz.
 Bunu küratörlüğü yapılmış gerçek ürün verisiyle değiştirmek Faz 1C'nin ilk işi.
 

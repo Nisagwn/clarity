@@ -3,7 +3,7 @@
 # Veritabanı Docker'da çalışır; yerel PostgreSQL kurulumuna gerek yoktur.
 COMPOSE      := docker compose
 COMPOSE_TEST := docker compose -f docker-compose.test.yml
-TEST_DSN     := postgres://beauty:beauty@localhost:5434/beauty_test?sslmode=disable
+TEST_DSN     := postgres://beauty:beauty@127.0.0.1:5434/beauty_test?sslmode=disable
 PSQL    := $(COMPOSE) exec -T postgres psql -U beauty -d beauty_ingredient
 
 help:
