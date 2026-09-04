@@ -11,12 +11,41 @@ export interface Ingredient {
   name: string
   inci_name: string
   description?: string
-  concern_level: number
+  /** 1-10 endişe seviyesi. Mevzuat kaydı olmayan içerikte `null`:
+   *  "henüz puanlanmadı" ile "risksiz" aynı şey değil. */
+  concern_level: number | null
+  /** Puanı üreten rubrik sürümü. */
+  score_version?: number | null
+  /** Puanın dayandığı mevzuat atıfları. */
+  score_sources?: string[]
+  /** "Neden bu puan?" — yalnızca detay uç noktasından gelir. */
+  scoring?: ScoreExplanation | null
   skin_types: string[]
   allergens: string[]
   benefits: string[]
   products_count?: number
   order_index?: number
+}
+
+/** Bir puanın tam gerekçesi: hangi kurallar uygulandı, hangi mevzuata dayanıyor. */
+export interface ScoreExplanation {
+  version: number
+  value: number
+  rules: { key: string; score: number; rationale: string }[]
+  sources: string[]
+  regulatory: {
+    cas_number?: string
+    ec_number?: string
+    annex?: string
+    annex_entry?: string
+    restriction?: string
+    max_concentration?: number
+    declarable_allergen: boolean
+    sccs_opinion?: string
+    sccs_adverse: boolean
+    source_url: string
+    fetched_at: string
+  }
 }
 
 export interface Product {
@@ -46,7 +75,7 @@ export interface AllergenMatch {
   allergen: string
   ingredient: string
   severity: number
-  concern_level: number
+  concern_level: number | null
 }
 
 export interface AllergenCheckResult {
@@ -150,6 +179,9 @@ export async function apiFetch<T>(
 
 export interface IngredientListResponse {
   total: number
+  /** max_concern süzgeci uygulandığında, puanı olmadığı için elenen içerik
+   *  sayısı. Gösterilmesi zorunlu: liste tam sanılmamalı. */
+  unscored_excluded: number
   limit: number
   offset: number
   ingredients: Ingredient[]
@@ -294,27 +326,38 @@ export function deleteAccount() {
 // ===== Görüntüleme yardımcıları =====
 
 /**
- * EWG endişe seviyesini marka paletinden seçilmiş sıralı bir ölçeğe eşler:
- * adaçayı (güvenli) → terrakota (orta) → şarap (yüksek). Renkler paletin
+ * Endişe seviyesini marka paletinden seçilmiş sıralı bir ölçeğe eşler:
+ * adaçayı (düşük) → terrakota (orta) → şarap (yüksek). Renkler paletin
  * içinden geliyor ama sıcaklık arttıkça uyarı şiddeti de artıyor.
+ *
+ * Puanı olmayan içerik nötr kalır: gri, "bilinmiyor" demek. Yeşil göstermek
+ * mevzuat verisi olmayan bir maddeyi güvenli ilan etmek olurdu.
  */
-export function concernColor(level: number): string {
+export function concernColor(level: number | null): string {
+  if (level === null) return 'text-ink-muted'
   if (level <= 3) return 'text-sage'
   if (level <= 6) return 'text-clay'
   return 'text-brand-500'
 }
 
-/** EWG endişe seviyesini rozet stiline eşler. */
-export function concernBadge(level: number): string {
+/** Endişe seviyesini rozet stiline eşler. */
+export function concernBadge(level: number | null): string {
+  if (level === null) return 'bg-brand-50 text-ink-muted border-brand-100'
   if (level <= 3) return 'bg-sage/10 text-sage border-sage/30'
   if (level <= 6) return 'bg-clay/15 text-cocoa border-clay/40'
   return 'bg-brand-100 text-brand-500 border-brand-300'
 }
 
-export function concernLabel(level: number): string {
+export function concernLabel(level: number | null): string {
+  if (level === null) return 'Henüz puanlanmadı'
   if (level <= 3) return 'Düşük risk'
   if (level <= 6) return 'Orta risk'
   return 'Yüksek risk'
+}
+
+/** Rozette görünen metin: puan yoksa çizgi, sayı değil. */
+export function concernScore(level: number | null): string {
+  return level === null ? '—' : `${level}/10`
 }
 
 export function formatPrice(price: number, currency: string): string {

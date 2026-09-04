@@ -1,55 +1,126 @@
 -- Beauty Ingredient Explorer - geliştirme ortamı örnek verisi
 --
--- İçerikler ve INCI adları gerçektir; endişe seviyeleri EWG'nin 1-10 ölçeğini
--- izler. ÜRÜNLER KURGUSALDIR: uydurma marka adları altında makul içerik
--- listeleri, böylece burada gerçekten satın alabileceğiniz hiçbir ürün yanlış
--- tanıtılmaz. Faz 1C'de bu dosya küratörlüğü yapılmış gerçek ürün verisiyle
--- değiştirilecek.
+-- İçerikler ve INCI adları gerçektir. ÜRÜNLER KURGUSALDIR: uydurma marka
+-- adları altında makul içerik listeleri, böylece burada gerçekten satın
+-- alabileceğiniz hiçbir ürün yanlış tanıtılmaz. Faz 4'te bu dosya Open Beauty
+-- Facts'ten gelen gerçek ürün verisiyle değiştirilecek.
+--
+-- ENDİŞE SEVİYESİ BURADA YAZILMAZ. Puanlar AB Tüzüğü 1223/2009 Eklerinden
+-- türetilir; bu dosya yalnızca dayanağı (ingredient_regulatory) kurar.
+-- Puanları yazmak için seed'den sonra:
+--
+--     make score        (veya: cd backend && go run ./cmd/score)
 --
 -- Tekrar çalıştırmak güvenlidir: her ifade idempotenttir.
 
 -- ===== İçerikler =====
 -- name = Türkçe yaygın ad, inci_name = uluslararası INCI adı (çevrilmez).
 
-INSERT INTO ingredients (name, inci_name, description, concern_level) VALUES
-    ('Su',                     'Aqua',                            'Evrensel çözücü; çoğu kozmetik formülün temelini oluşturur.', 1),
-    ('Gliserin',               'Glycerin',                        'Cildin üst katmanlarına su çeken bir nem tutucu.', 2),
-    ('Niasinamid',             'Niacinamide',                     'Aydınlatma ve bariyer desteği için kullanılan B3 vitamini türevi.', 1),
-    ('Hyalüronik Asit',        'Sodium Hyaluronate',              'Kendi ağırlığının katlarca fazlası suyu tutabilen nem tutucu.', 1),
-    ('Skualan',                'Squalane',                        'Hafif, gözenek tıkamayan yumuşatıcı; genelde zeytin veya şeker kamışı kaynaklı.', 1),
-    ('Pantenol',               'Panthenol',                       'Provitamin B5; yatıştırıcı ve nemlendirici.', 1),
-    ('Seramid NP',             'Ceramide NP',                     'Cildin kendi lipidiyle özdeş yapı; nem bariyerini onarmaya yardım eder.', 1),
-    ('Aloe Vera Yaprak Suyu',  'Aloe Barbadensis Leaf Juice',     'Güneş sonrası ve hassas cilt ürünlerinde kullanılan yatıştırıcı bitki özütü.', 1),
-    ('Tokoferol (E Vitamini)', 'Tocopherol',                      'Antioksidan; aynı zamanda formüldeki yağların bozulmasını geciktirir.', 2),
-    ('Shea Yağı',              'Butyrospermum Parkii Butter',     'Kuru cildi besleyen, kuruyemiş kaynaklı zengin bir yağ.', 1),
-    ('Hindistan Cevizi Yağı',  'Cocos Nucifera Oil',              'Nem hapseden bitkisel yağ; bazı cilt tiplerinde gözenek tıkayıcıdır.', 2),
-    ('Titanyum Dioksit',       'Titanium Dioxide (CI 77891)',     'Mineral UV filtresi ve beyaz pigment.', 2),
-    ('Çinko Oksit',            'Zinc Oxide',                      'Geniş spektrumlu mineral UV filtresi; hafif yatıştırıcı etkisi de vardır.', 2),
-    ('Demir Oksitler',         'Iron Oxides (CI 77491)',          'Kırmızı, sarı ve siyah tonları veren mineral pigmentler.', 1),
-    ('Mika',                   'Mica (CI 77019)',                 'Işıltı ve yumuşak odak etkisi için kullanılan mineral.', 2),
-    ('Silika',                 'Silica',                          'Matlaştırıcı, yağ emici mineral toz.', 2),
-    ('Talk',                   'Talc',                            'Yumuşak mineral dolgu; asbest riski nedeniyle tedarik kaynağı önemlidir.', 5),
-    ('Bizmut Oksiklorür',      'Bismuth Oxychloride',             'Sedefli mineral pigment; hassas ciltte tahrişe yol açabilir.', 4),
-    ('Karmin',                 'Carmine (CI 75470)',              'Koşnil böceğinden elde edilen kırmızı pigment.', 3),
-    ('Dimetikon',              'Dimethicone',                     'Cilt dokusunu pürüzsüzleştiren ve ince çizgileri gizleyen silikon.', 3),
-    ('Siklopentasiloksan',     'Cyclopentasiloxane',              'İpeksi bir kayganlık veren ve uçan silikon.', 3),
-    ('Setearil Alkol',         'Cetearyl Alcohol',                'Yumuşatıcı ve emülgatör olarak kullanılan yağ alkolü; kurutucu değildir.', 2),
-    ('Poligliseril-3 Diizostearat', 'Polyglyceryl-3 Diisostearate', 'Su-yağ formülleri için yumuşak, noniyonik emülgatör.', 2),
-    ('Fenoksietanol',          'Phenoxyethanol',                  'Geniş spektrumlu koruyucu; AB''de %1 ile sınırlıdır.', 4),
-    ('Metilparaben',           'Methylparaben',                   'Paraben grubu koruyucu; etkilidir ama tüketiciler yaygın olarak kaçınır.', 4),
-    ('DMDM Hidantoin',         'DMDM Hydantoin',                  'Yavaşça formaldehit salarak koruyuculuk sağlayan madde.', 7),
-    ('Propilen Glikol',        'Propylene Glycol',                'Nem tutucu ve çözücü; bazı kişilerde bilinen bir temas alerjenidir.', 3),
-    ('Denatüre Alkol',         'Alcohol Denat.',                  'Hızlı uçan çözücü; yüksek oranlarda hassasiyet yaratabilir.', 4),
-    ('Sodyum Lauril Sülfat',   'Sodium Lauryl Sulfate',           'Cilt bariyerini sıyırabilen güçlü anyonik yüzey aktif madde.', 5),
-    ('Kokamidopropil Betain',  'Cocamidopropyl Betaine',          'Hindistan cevizi kaynaklı daha yumuşak yüzey aktif; tanınmış temas alerjeni.', 4),
-    ('Salisilik Asit',         'Salicylic Acid',                  'Gözenek içinde peeling yapan beta hidroksi asit.', 4),
-    ('Retinol',                'Retinol',                         'Hücre yenilenmesi için A vitamini türevi; gebelikte kullanılmaz.', 9),
-    ('Lanolin',                'Lanolin',                         'Yün kaynaklı nem hapsedici; klasik bir temas alerjeni.', 3),
-    ('Parfüm',                 'Parfum (Fragrance)',              'İçeriği açıklanmayan koku karışımı; en yaygın kozmetik alerjeni.', 8),
-    ('Linalool',               'Linalool',                        'Okside olduğunda hassasiyet yaratan koku bileşeni.', 5),
-    ('Limonen',                'Limonene',                        'Narenciye kaynaklı koku bileşeni; AB''nin 26 bildirimli alerjeninden biri.', 5),
-    ('Benzil Salisilat',       'Benzyl Salicylate',               'AB bildirimli alerjen listesindeki koku maddesi.', 6)
+INSERT INTO ingredients (name, inci_name, description) VALUES
+    ('Su',                     'Aqua',                            'Evrensel çözücü; çoğu kozmetik formülün temelini oluşturur.'),
+    ('Gliserin',               'Glycerin',                        'Cildin üst katmanlarına su çeken bir nem tutucu.'),
+    ('Niasinamid',             'Niacinamide',                     'Aydınlatma ve bariyer desteği için kullanılan B3 vitamini türevi.'),
+    ('Hyalüronik Asit',        'Sodium Hyaluronate',              'Kendi ağırlığının katlarca fazlası suyu tutabilen nem tutucu.'),
+    ('Skualan',                'Squalane',                        'Hafif, gözenek tıkamayan yumuşatıcı; genelde zeytin veya şeker kamışı kaynaklı.'),
+    ('Pantenol',               'Panthenol',                       'Provitamin B5; yatıştırıcı ve nemlendirici.'),
+    ('Seramid NP',             'Ceramide NP',                     'Cildin kendi lipidiyle özdeş yapı; nem bariyerini onarmaya yardım eder.'),
+    ('Aloe Vera Yaprak Suyu',  'Aloe Barbadensis Leaf Juice',     'Güneş sonrası ve hassas cilt ürünlerinde kullanılan yatıştırıcı bitki özütü.'),
+    ('Tokoferol (E Vitamini)', 'Tocopherol',                      'Antioksidan; aynı zamanda formüldeki yağların bozulmasını geciktirir.'),
+    ('Shea Yağı',              'Butyrospermum Parkii Butter',     'Kuru cildi besleyen, kuruyemiş kaynaklı zengin bir yağ.'),
+    ('Hindistan Cevizi Yağı',  'Cocos Nucifera Oil',              'Nem hapseden bitkisel yağ; bazı cilt tiplerinde gözenek tıkayıcıdır.'),
+    ('Titanyum Dioksit',       'Titanium Dioxide (CI 77891)',     'Mineral UV filtresi ve beyaz pigment.'),
+    ('Çinko Oksit',            'Zinc Oxide',                      'Geniş spektrumlu mineral UV filtresi; hafif yatıştırıcı etkisi de vardır.'),
+    ('Demir Oksitler',         'Iron Oxides (CI 77491)',          'Kırmızı, sarı ve siyah tonları veren mineral pigmentler.'),
+    ('Mika',                   'Mica (CI 77019)',                 'Işıltı ve yumuşak odak etkisi için kullanılan mineral.'),
+    ('Silika',                 'Silica',                          'Matlaştırıcı, yağ emici mineral toz.'),
+    ('Talk',                   'Talc',                            'Yumuşak mineral dolgu; asbest riski nedeniyle tedarik kaynağı önemlidir.'),
+    ('Bizmut Oksiklorür',      'Bismuth Oxychloride',             'Sedefli mineral pigment; hassas ciltte tahrişe yol açabilir.'),
+    ('Karmin',                 'Carmine (CI 75470)',              'Koşnil böceğinden elde edilen kırmızı pigment.'),
+    ('Dimetikon',              'Dimethicone',                     'Cilt dokusunu pürüzsüzleştiren ve ince çizgileri gizleyen silikon.'),
+    ('Siklopentasiloksan',     'Cyclopentasiloxane',              'İpeksi bir kayganlık veren ve uçan silikon.'),
+    ('Setearil Alkol',         'Cetearyl Alcohol',                'Yumuşatıcı ve emülgatör olarak kullanılan yağ alkolü; kurutucu değildir.'),
+    ('Poligliseril-3 Diizostearat', 'Polyglyceryl-3 Diisostearate', 'Su-yağ formülleri için yumuşak, noniyonik emülgatör.'),
+    ('Fenoksietanol',          'Phenoxyethanol',                  'Geniş spektrumlu koruyucu; AB''de %1 ile sınırlıdır.'),
+    ('Metilparaben',           'Methylparaben',                   'Paraben grubu koruyucu; etkilidir ama tüketiciler yaygın olarak kaçınır.'),
+    ('DMDM Hidantoin',         'DMDM Hydantoin',                  'Yavaşça formaldehit salarak koruyuculuk sağlayan madde.'),
+    ('Propilen Glikol',        'Propylene Glycol',                'Nem tutucu ve çözücü; bazı kişilerde bilinen bir temas alerjenidir.'),
+    ('Denatüre Alkol',         'Alcohol Denat.',                  'Hızlı uçan çözücü; yüksek oranlarda hassasiyet yaratabilir.'),
+    ('Sodyum Lauril Sülfat',   'Sodium Lauryl Sulfate',           'Cilt bariyerini sıyırabilen güçlü anyonik yüzey aktif madde.'),
+    ('Kokamidopropil Betain',  'Cocamidopropyl Betaine',          'Hindistan cevizi kaynaklı daha yumuşak yüzey aktif; tanınmış temas alerjeni.'),
+    ('Salisilik Asit',         'Salicylic Acid',                  'Gözenek içinde peeling yapan beta hidroksi asit.'),
+    ('Retinol',                'Retinol',                         'Hücre yenilenmesi için A vitamini türevi; gebelikte kullanılmaz.'),
+    ('Lanolin',                'Lanolin',                         'Yün kaynaklı nem hapsedici; klasik bir temas alerjeni.'),
+    ('Parfüm',                 'Parfum (Fragrance)',              'İçeriği açıklanmayan koku karışımı; en yaygın kozmetik alerjeni.'),
+    ('Linalool',               'Linalool',                        'Okside olduğunda hassasiyet yaratan koku bileşeni.'),
+    ('Limonen',                'Limonene',                        'Narenciye kaynaklı koku bileşeni; AB''nin 26 bildirimli alerjeninden biri.'),
+    ('Benzil Salisilat',       'Benzyl Salicylate',               'AB bildirimli alerjen listesindeki koku maddesi.')
 ON CONFLICT (name) DO NOTHING;
+
+-- ===== Mevzuat kayıtları =====
+--
+-- Puanın dayanağı. 000005_regulatory_scoring göçü bu satırları zaten
+-- yazıyor; ancak göç boş bir veritabanında çalıştığında eşleşecek içerik
+-- olmadığı için hiçbir şey yazamaz. Bu yüzden seed de aynı veriyi kurar.
+--
+-- Yalnızca TANIMI GEREĞİ kesin olan kayıtlar var: Ek III bildirimli koku
+-- alerjenleri, Ek V koruyucular, Ek VI UV filtreleri, Ek IV renklendiriciler.
+-- Geri kalan içerikler BİLİNÇLİ olarak boş: tahmin edilmiş bir Ek numarası,
+-- tahmin edilmiş bir puandan kötüdür: mevzuata atıf yapıyormuş gibi görünüp
+-- yanlış olur. Tam CosIng dışa aktarımı için: backend/scripts/import-cosing
+
+INSERT INTO ingredient_regulatory
+    (ingredient_id, annex, annex_entry, declarable_allergen, restriction, source_url)
+SELECT i.id, v.annex, v.entry, v.declarable, v.restriction, v.url
+FROM (VALUES
+    -- Ek III — bildirimli koku alerjenleri
+    ('Linalool',          'III', '84', TRUE,
+     'Etikette beyanı zorunlu; yıkanan üründe %0,001, yıkanmayan üründe %0,01 üstünde bildirilir',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+    ('Limonen',           'III', '89', TRUE,
+     'Etikette beyanı zorunlu; peroksit değeri sınırlı',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+    ('Benzil Salisilat',  'III', '76', TRUE,
+     'Etikette beyanı zorunlu',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+
+    -- Ek V — koruyucular
+    ('Fenoksietanol',     'V',   '29', FALSE,
+     'Koruyucu olarak en fazla %1',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+    ('Metilparaben',      'V',   '12', FALSE,
+     'Koruyucu olarak kısıtlı; tek başına ve toplam paraben sınırı var',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+    ('DMDM Hidantoin',    'V',   '33', FALSE,
+     'Formaldehit salıcı koruyucu; salınan formaldehit için etiket uyarısı gerekir',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+
+    -- Ek VI — UV filtreleri
+    ('Titanyum Dioksit',  'VI',  '27', FALSE,
+     'UV filtresi olarak en fazla %25; solunabilir toz biçimi ayrı değerlendirilir',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+    ('Çinko Oksit',       'VI',  '30', FALSE,
+     'UV filtresi olarak en fazla %25',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+
+    -- Ek IV — renklendiriciler
+    ('Demir Oksitler',    'IV',  'CI 77491/77492/77499', FALSE,
+     'Renklendirici olarak izinli',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+    ('Mika',              'IV',  'CI 77019', FALSE,
+     'Renklendirici olarak izinli',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223'),
+    ('Karmin',            'IV',  'CI 75470', FALSE,
+     'Renklendirici olarak izinli',
+     'https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223')
+) AS v(ing_name, annex, entry, declarable, restriction, url)
+JOIN ingredients i ON i.name = v.ing_name
+ON CONFLICT (ingredient_id) DO UPDATE SET
+    annex               = EXCLUDED.annex,
+    annex_entry         = EXCLUDED.annex_entry,
+    declarable_allergen = EXCLUDED.declarable_allergen,
+    restriction         = EXCLUDED.restriction,
+    source_url          = EXCLUDED.source_url,
+    fetched_at          = CURRENT_TIMESTAMP;
 
 -- ===== Alerjen eşleştirmeleri =====
 

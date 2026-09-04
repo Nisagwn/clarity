@@ -21,7 +21,9 @@ const ingredientSelect = `
 	       i.name,
 	       COALESCE(i.inci_name, ''),
 	       COALESCE(i.description, ''),
-	       COALESCE(i.concern_level, 0),
+	       i.concern_level,
+	       i.score_version,
+	       COALESCE(i.score_sources, '{}'),
 	       COALESCE(ARRAY_AGG(DISTINCT st.skin_type) FILTER (WHERE st.skin_type IS NOT NULL), '{}'),
 	       COALESCE(ARRAY_AGG(DISTINCT al.allergen_name) FILTER (WHERE al.allergen_name IS NOT NULL), '{}'),
 	       COALESCE(ARRAY_AGG(DISTINCT be.benefit) FILTER (WHERE be.benefit IS NOT NULL), '{}')
@@ -33,7 +35,8 @@ const ingredientSelect = `
 func scanIngredient(scan func(dest ...any) error) (models.Ingredient, error) {
 	var ing models.Ingredient
 	err := scan(
-		&ing.ID, &ing.Name, &ing.INCIName, &ing.Description, &ing.ConcernLevel,
+		&ing.ID, &ing.Name, &ing.INCIName, &ing.Description,
+		&ing.ConcernLevel, &ing.ScoreVersion, pq.Array(&ing.ScoreSources),
 		pq.Array(&ing.SkinTypes), pq.Array(&ing.Allergens), pq.Array(&ing.Benefits),
 	)
 	return ing, err
@@ -44,7 +47,8 @@ func scanIngredient(scan func(dest ...any) error) (models.Ingredient, error) {
 //	?q=              ad / INCI adı üzerinde serbest metin araması
 //	?skin_type=      o cilt tipine uygun (veya "all" etiketli) içerikleri tutar
 //	?avoid_allergens=virgülle ayrılır; bu alerjenleri taşıyan içerikleri eler
-//	?max_concern=    EWG endişe seviyesi üst sınırı
+//	?max_concern=    endişe seviyesi üst sınırı; puanlanmamış içerikler elenir
+//	                 ve kaç tanesinin elendiği unscored_excluded ile bildirilir
 //	?limit= &offset= sayfalama (limit varsayılan 50, en fazla 200)
 func (s *Server) ListIngredients(c *gin.Context) {
 	skinType := strings.ToLower(strings.TrimSpace(c.Query("skin_type")))
@@ -90,14 +94,21 @@ func (s *Server) ListIngredients(c *gin.Context) {
 				"JOIN allergen_alias user_alias ON user_alias.canonical_id = ing_alias.canonical_id "+
 				"WHERE a2.ingredient_id = i.id AND LOWER(user_alias.alias) = ANY(%s))", arg(pq.Array(avoid))))
 	}
-	if c.Query("max_concern") != "" {
-		where = append(where, fmt.Sprintf("COALESCE(i.concern_level, 0) <= %s", arg(intQuery(c, "max_concern", 10, 10))))
+	// Puan süzgecinden önceki hâl: kaç içeriğin puansız olduğu için elendiğini
+	// söyleyebilmek gerekiyor.
+	baseWhere := append([]string(nil), where...)
+	baseArgs := append([]any(nil), args...)
+
+	byConcern := c.Query("max_concern") != ""
+	if byConcern {
+		// Puanı olmayan içerik süzgecin dışında kalır. Bilinmeyen bir puanı
+		// "yeterince düşük" saymak, kullanıcıya olmayan bir güvence verirdi.
+		where = append(where, fmt.Sprintf(
+			"i.concern_level IS NOT NULL AND i.concern_level <= %s",
+			arg(intQuery(c, "max_concern", 10, 10))))
 	}
 
-	clause := ""
-	if len(where) > 0 {
-		clause = " WHERE " + strings.Join(where, " AND ")
-	}
+	clause := whereClause(where)
 
 	ctx := c.Request.Context()
 
@@ -106,6 +117,17 @@ func (s *Server) ListIngredients(c *gin.Context) {
 	if err := s.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM ingredients i"+clause, args...).Scan(&total); err != nil {
 		serverError(c, err)
 		return
+	}
+
+	// Elenen puansız içerikler sessizce kaybolmaz: kullanıcı listenin tam
+	// olduğunu sanmamalı.
+	unscoredExcluded := 0
+	if byConcern {
+		query := "SELECT COUNT(*) FROM ingredients i" + whereClause(append(baseWhere, "i.concern_level IS NULL"))
+		if err := s.DB.QueryRowContext(ctx, query, baseArgs...).Scan(&unscoredExcluded); err != nil {
+			serverError(c, err)
+			return
+		}
 	}
 
 	limit := intQuery(c, "limit", 50, 200)
@@ -139,12 +161,13 @@ func (s *Server) ListIngredients(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"skin_type":       skinType,
-		"avoid_allergens": avoid,
-		"total":           total,
-		"limit":           limit,
-		"offset":          offset,
-		"ingredients":     ingredients,
+		"skin_type":         skinType,
+		"avoid_allergens":   avoid,
+		"total":             total,
+		"unscored_excluded": unscoredExcluded,
+		"limit":             limit,
+		"offset":            offset,
+		"ingredients":       ingredients,
 	})
 }
 
@@ -175,7 +198,63 @@ func (s *Server) GetIngredient(c *gin.Context) {
 		return
 	}
 
+	// "Neden bu puan?" — puanı üreten kurallar ve mevzuat atfı. Puanı olmayan
+	// içerikte scoring alanı hiç dönmez; arayüz "henüz puanlanmadı" gösterir.
+	if err := s.attachScoring(ctx, &ing); err != nil {
+		serverError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, ing)
+}
+
+// attachScoring, içeriğin mevzuat kaydını okur ve puanı üreten kuralları
+// ing.Scoring içine yerleştirir.
+//
+// Açıklama, puanın yazıldığı rubrik SÜRÜMÜYLE yeniden hesaplanır: rubrik v2'ye
+// geçtiğinde v1 ile puanlanmış bir içeriğin gerekçesi hâlâ v1'in gerekçesidir.
+func (s *Server) attachScoring(ctx context.Context, ing *models.Ingredient) error {
+	if ing.ScoreVersion == nil {
+		return nil
+	}
+
+	const query = `
+		SELECT COALESCE(cas_number, ''), COALESCE(ec_number, ''),
+		       COALESCE(annex, ''), COALESCE(annex_entry, ''),
+		       COALESCE(restriction, ''), max_concentration,
+		       declarable_allergen, COALESCE(sccs_opinion, ''), sccs_adverse,
+		       source_url, fetched_at
+		FROM ingredient_regulatory
+		WHERE ingredient_id = $1`
+
+	var reg models.Regulatory
+	err := s.DB.QueryRowContext(ctx, query, ing.ID).Scan(
+		&reg.CASNumber, &reg.ECNumber, &reg.Annex, &reg.AnnexEntry,
+		&reg.Restriction, &reg.MaxConcentration, &reg.DeclarableAllergen,
+		&reg.SCCSOpinion, &reg.SCCSAdverse, &reg.SourceURL, &reg.FetchedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		// Puan var ama dayanağı yok: bu bir veri tutarsızlığıdır, sessizce
+		// geçilmez. Puanı göstermeyi bırakırız.
+		ing.ConcernLevel = nil
+		ing.ScoreVersion = nil
+		ing.ScoreSources = nil
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	rubric, err := s.rubric(ctx, *ing.ScoreVersion)
+	if err != nil {
+		return err
+	}
+
+	ing.Scoring = &models.ScoreExplanation{
+		Score:      rubric.Apply(reg.Facts()),
+		Regulatory: reg,
+	}
+	return nil
 }
 
 // AllergenCheck, POST /ingredients/allergen-check isteğini işler: bir ürünün
@@ -225,7 +304,7 @@ func (s *Server) AllergenCheck(c *gin.Context) {
 			SELECT DISTINCT ac.name,
 			                i.name,
 			                COALESCE(ia.severity, 0),
-			                COALESCE(i.concern_level, 0)
+			                i.concern_level
 			FROM product_ingredients pi
 			JOIN ingredients i ON i.id = pi.ingredient_id
 			JOIN ingredient_allergens ia ON ia.ingredient_id = i.id

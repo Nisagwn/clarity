@@ -57,6 +57,30 @@ jobs:
           TEST_DATABASE_URL: postgres://beauty:beauty@localhost:5434/beauty_test?sslmode=disable
         run: go test ./... -count=1
 
+      # Faz 3'ün sözü: hiçbir puan elle atanmaz. Örnek veri yüklenip puanlar
+      # türetildikten sonra dayanağı olmayan tek bir puan bile kalmamalı.
+      - name: Puanlar mevzuata bağlı mı
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://beauty:beauty@localhost:5434/beauty_test?sslmode=disable
+          PGPASSWORD: beauty
+        run: |
+          PSQL="psql -h localhost -p 5434 -U beauty -d beauty_test -tAq -v ON_ERROR_STOP=1"
+          go run ./cmd/migrate up
+          $PSQL -f db/seed.sql > /dev/null
+          go run ./cmd/score
+          orphan=$($PSQL -c "SELECT count(*) FROM ingredients WHERE concern_level IS NOT NULL AND score_version IS NULL")
+          scored=$($PSQL -c "SELECT count(*) FROM ingredients WHERE score_version IS NOT NULL")
+          echo "puanlı içerik: $scored, dayanaksız puan: $orphan"
+          if [ "$orphan" != "0" ]; then
+            echo "Dayanağı olmayan puan var: kaynağa çözülemeyen $orphan içerik"
+            exit 1
+          fi
+          if [ "$scored" = "0" ]; then
+            echo "Hiçbir içerik puanlanmadı; mevzuat verisi yüklenmemiş olabilir"
+            exit 1
+          fi
+
       - name: Göçler ileri ve geri çalışıyor mu
         working-directory: backend
         env:

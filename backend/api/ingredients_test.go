@@ -242,12 +242,17 @@ func TestAllergenCheckNotFound(t *testing.T) {
 // ===== Filtre testleri =====
 
 type ingredientListResponse struct {
-	Total       int `json:"total"`
-	Ingredients []struct {
-		ID        int      `json:"id"`
-		Name      string   `json:"name"`
-		Allergens []string `json:"allergens"`
-		SkinTypes []string `json:"skin_types"`
+	Total int `json:"total"`
+	// Puanı olmadığı için max_concern süzgecinin dışında kalanların sayısı.
+	UnscoredExcluded int `json:"unscored_excluded"`
+	Ingredients      []struct {
+		ID           int      `json:"id"`
+		Name         string   `json:"name"`
+		ConcernLevel *int     `json:"concern_level"`
+		ScoreVersion *int     `json:"score_version"`
+		ScoreSources []string `json:"score_sources"`
+		Allergens    []string `json:"allergens"`
+		SkinTypes    []string `json:"skin_types"`
 	} `json:"ingredients"`
 }
 

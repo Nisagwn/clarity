@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -15,6 +16,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
+
+	"github.com/nisa/beauty-ingredient/scoring"
 )
 
 // Testler TEST_DATABASE_URL ile ayrı bir veritabanına bağlanır. Geliştirme
@@ -69,9 +72,12 @@ func testDB(t *testing.T) *sql.DB {
 func truncateAll(t *testing.T, db *sql.DB) {
 	t.Helper()
 
+	// scoring_rule bilinçli olarak temizlenmez: rubrik göçle gelen referans
+	// veridir, teste ait değil.
 	const q = `
 		TRUNCATE ingredients, ingredient_allergens, ingredient_benefits,
-		         ingredient_skin_types, products, product_ingredients,
+		         ingredient_skin_types, ingredient_regulatory,
+		         products, product_ingredients,
 		         user_profiles, user_allergens, user_favorites,
 		         product_reviews, price_history
 		RESTART IDENTITY CASCADE`
@@ -152,6 +158,37 @@ func addIngredient(t *testing.T, db *sql.DB, name, inci string, concern int) int
 		t.Fatalf("içerik eklenemedi (%s): %v", name, err)
 	}
 	return id
+}
+
+// addRegulatory, bir içeriğe mevzuat kaydı ekler: puanın dayanağı budur.
+// Kayıt yoksa içerik puansız kalır.
+func addRegulatory(t *testing.T, db *sql.DB, ingredientID int, annex, entry string, declarable bool) {
+	t.Helper()
+
+	const q = `
+		INSERT INTO ingredient_regulatory
+		    (ingredient_id, annex, annex_entry, declarable_allergen, source_url)
+		VALUES ($1, $2, $3, $4, $5)`
+
+	_, err := db.Exec(q, ingredientID, annex, entry, declarable, testSourceURL)
+	if err != nil {
+		t.Fatalf("mevzuat kaydı eklenemedi (%d): %v", ingredientID, err)
+	}
+}
+
+// testSourceURL, fixture'larda kullanılan mevzuat atfı.
+const testSourceURL = "https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223"
+
+// rescore, cmd/score'un yaptığı işi test içinde yapar: puanları mevzuat
+// verisinden yeniden türetir. Komutla aynı kodu çalıştırır.
+func rescore(t *testing.T, db *sql.DB) scoring.Summary {
+	t.Helper()
+
+	sum, err := scoring.Recompute(context.Background(), db, scoring.CurrentVersion, false)
+	if err != nil {
+		t.Fatalf("puanlar türetilemedi: %v", err)
+	}
+	return sum
 }
 
 // addAllergen, bir içeriğe alerjen bağlar.

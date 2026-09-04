@@ -4,21 +4,72 @@
 // bu yüzden İngilizce kalır; arayüz bunları Türkçe etiketlerle gösterir.
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/nisa/beauty-ingredient/scoring"
+)
 
 // Ingredient, güvenlik bilgileriyle birlikte tek bir kozmetik içeriktir.
 // Name Türkçe yaygın adı, INCIName ise çevrilmeyen uluslararası INCI adını tutar.
 type Ingredient struct {
-	ID            int      `json:"id"`
-	Name          string   `json:"name"`
-	INCIName      string   `json:"inci_name"`
-	Description   string   `json:"description,omitempty"`
-	ConcernLevel  int      `json:"concern_level"` // EWG ölçeği 1-10
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	INCIName    string `json:"inci_name"`
+	Description string `json:"description,omitempty"`
+
+	// ConcernLevel 1-10 ölçeğinde bir endişe seviyesidir ve mevzuattan
+	// TÜRETİLİR (bkz. scoring paketi). Mevzuat kaydı olmayan içerikte null
+	// kalır: 0 göstermek "güvenli" diye okunurdu, oysa bilinen bir şey yok.
+	ConcernLevel *int `json:"concern_level"`
+	// ScoreVersion, puanı üreten rubrik sürümü; ScoreSources ise puanın
+	// dayandığı mevzuat atıflarıdır.
+	ScoreVersion *int     `json:"score_version"`
+	ScoreSources []string `json:"score_sources"`
+	// Scoring, "neden bu puan?" açıklamasıdır ve yalnızca detay uç
+	// noktasında doldurulur.
+	Scoring *ScoreExplanation `json:"scoring,omitempty"`
+
 	SkinTypes     []string `json:"skin_types"`
 	Allergens     []string `json:"allergens"`
 	Benefits      []string `json:"benefits"`
 	ProductsCount int      `json:"products_count,omitempty"`
 	OrderIndex    int      `json:"order_index,omitempty"` // ürünün INCI listesindeki sırası
+}
+
+// ScoreExplanation, bir puanın tam gerekçesi: hangi kurallar uygulandı ve
+// hangi mevzuata dayanıyor. Puan hiçbir yerde gerekçesiz gösterilmez.
+type ScoreExplanation struct {
+	scoring.Score
+	Regulatory Regulatory `json:"regulatory"`
+}
+
+// Regulatory, bir içeriğin ingredient_regulatory kaydıdır: AB Tüzüğü
+// 1223/2009 Eklerindeki yeri ve varsa SCCS görüşü.
+type Regulatory struct {
+	CASNumber          string    `json:"cas_number,omitempty"`
+	ECNumber           string    `json:"ec_number,omitempty"`
+	Annex              string    `json:"annex,omitempty"`
+	AnnexEntry         string    `json:"annex_entry,omitempty"`
+	Restriction        string    `json:"restriction,omitempty"`
+	MaxConcentration   *float64  `json:"max_concentration,omitempty"`
+	DeclarableAllergen bool      `json:"declarable_allergen"`
+	SCCSOpinion        string    `json:"sccs_opinion,omitempty"`
+	SCCSAdverse        bool      `json:"sccs_adverse"`
+	SourceURL          string    `json:"source_url"`
+	FetchedAt          time.Time `json:"fetched_at"`
+}
+
+// Facts, kaydın puanlamayı ilgilendiren alanlarını scoring paketine taşır.
+func (r Regulatory) Facts() scoring.Facts {
+	return scoring.Facts{
+		Annex:              r.Annex,
+		AnnexEntry:         r.AnnexEntry,
+		DeclarableAllergen: r.DeclarableAllergen,
+		SCCSAdverse:        r.SCCSAdverse,
+		SCCSOpinion:        r.SCCSOpinion,
+		SourceURL:          r.SourceURL,
+	}
 }
 
 // Product, bir makyaj ürünü ve istendiğinde içerik listesidir.
@@ -49,10 +100,11 @@ type UserProfile struct {
 
 // AllergenMatch, kullanıcının alerjen listesine takılan bir ürün içeriğidir.
 type AllergenMatch struct {
-	Allergen     string `json:"allergen"`
-	Ingredient   string `json:"ingredient"`
-	Severity     int    `json:"severity"`
-	ConcernLevel int    `json:"concern_level"`
+	Allergen   string `json:"allergen"`
+	Ingredient string `json:"ingredient"`
+	Severity   int    `json:"severity"`
+	// Puanlanmamış içerikte null; uyarının kendisi puandan bağımsızdır.
+	ConcernLevel *int `json:"concern_level"`
 }
 
 // Recommendation, bir ürün için önerilen muadil ya da alternatiftir.

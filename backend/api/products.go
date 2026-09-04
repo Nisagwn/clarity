@@ -136,7 +136,9 @@ func (s *Server) productIngredients(ctx context.Context, productID int) ([]model
 		       i.name,
 		       COALESCE(i.inci_name, ''),
 		       COALESCE(i.description, ''),
-		       COALESCE(i.concern_level, 0),
+		       i.concern_level,
+		       i.score_version,
+		       COALESCE(i.score_sources, '{}'),
 		       COALESCE(ARRAY_AGG(DISTINCT st.skin_type) FILTER (WHERE st.skin_type IS NOT NULL), '{}'),
 		       COALESCE(ARRAY_AGG(DISTINCT al.allergen_name) FILTER (WHERE al.allergen_name IS NOT NULL), '{}'),
 		       COALESCE(ARRAY_AGG(DISTINCT be.benefit) FILTER (WHERE be.benefit IS NOT NULL), '{}'),
@@ -160,7 +162,8 @@ func (s *Server) productIngredients(ctx context.Context, productID int) ([]model
 	for rows.Next() {
 		var ing models.Ingredient
 		if err := rows.Scan(
-			&ing.ID, &ing.Name, &ing.INCIName, &ing.Description, &ing.ConcernLevel,
+			&ing.ID, &ing.Name, &ing.INCIName, &ing.Description,
+			&ing.ConcernLevel, &ing.ScoreVersion, pq.Array(&ing.ScoreSources),
 			pq.Array(&ing.SkinTypes), pq.Array(&ing.Allergens), pq.Array(&ing.Benefits),
 			&ing.OrderIndex,
 		); err != nil {

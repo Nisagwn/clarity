@@ -4,7 +4,13 @@
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { listProducts, getMyProfile, concernColor, type Product } from '@/lib/api'
+import {
+  listProducts,
+  getMyProfile,
+  concernColor,
+  concernScore,
+  type Product,
+} from '@/lib/api'
 
 interface DetectedProduct {
   id: number
@@ -20,7 +26,7 @@ interface IngredientsResult {
     id: number
     name: string
     inci_name: string
-    concern_level: number
+    concern_level: number | null
     allergens: string[]
     benefits: string[]
   }>
@@ -321,8 +327,13 @@ export default function UploadPage() {
                           ing.concern_level,
                         )}`}
                       >
-                        {ing.concern_level}/10
+                        {concernScore(ing.concern_level)}
                       </div>
+                      {ing.concern_level === null && (
+                        <div className="text-xs text-ink-muted">
+                          henüz puanlanmadı
+                        </div>
+                      )}
                     </div>
                   </div>
                   {ing.benefits.length > 0 && (

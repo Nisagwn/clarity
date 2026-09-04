@@ -27,7 +27,8 @@ export default async function ProductDetailPage({
   }
 
   const ingredients = product.ingredients ?? []
-  const riskiest = ingredients.filter((i) => i.concern_level >= 7)
+  // Puansız içerik burada sayılmaz: bilinmeyen bir puan "yüksek risk" değil.
+  const riskiest = ingredients.filter((i) => (i.concern_level ?? 0) >= 7)
   const withAllergens = ingredients.filter((i) => i.allergens.length > 0)
 
   return (

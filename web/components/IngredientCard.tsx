@@ -1,6 +1,6 @@
 // components/IngredientCard.tsx
 import Link from 'next/link'
-import { concernBadge, concernLabel, skinTypeLabel } from '@/lib/api'
+import { concernBadge, concernLabel, concernScore, skinTypeLabel } from '@/lib/api'
 import type { Ingredient } from '@/lib/api'
 
 /**
@@ -44,7 +44,8 @@ export default function IngredientCard({
           )}`}
           title={concernLabel(ingredient.concern_level)}
         >
-          {ingredient.concern_level}/10
+          <span className="sr-only">{concernLabel(ingredient.concern_level)}: </span>
+          {concernScore(ingredient.concern_level)}
         </span>
       </div>
 

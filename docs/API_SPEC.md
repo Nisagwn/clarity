@@ -151,7 +151,9 @@ Yanıt 200:
       "id": 1,
       "name": "Su",
       "inci_name": "Aqua",
-      "concern_level": 1,
+      "concern_level": null,
+      "score_version": null,
+      "score_sources": [],
       "benefits": ["çözücü"],
       "allergens": [],
       "order_index": 1
@@ -160,7 +162,9 @@ Yanıt 200:
       "id": 34,
       "name": "Parfüm",
       "inci_name": "Parfum (Fragrance)",
-      "concern_level": 8,
+      "concern_level": null,
+      "score_version": null,
+      "score_sources": [],
       "benefits": [],
       "allergens": ["parfüm"],
       "order_index": 11
@@ -210,17 +214,22 @@ Yanıt 200:
   "skin_type": "sensitive",
   "avoid_allergens": ["nikel", "parfüm"],
   "total": 11,
+  "unscored_excluded": 4,
   "limit": 50,
   "offset": 0,
   "ingredients": [
     {
-      "id": 1,
-      "name": "Su",
-      "inci_name": "Aqua",
-      "concern_level": 1,
+      "id": 20,
+      "name": "Linalool",
+      "inci_name": "Linalool",
+      "concern_level": 7,
+      "score_version": 1,
+      "score_sources": [
+        "AB Tüzüğü 1223/2009 Ek III — kısıtlı maddeler, giriş 84 — https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223"
+      ],
       "skin_types": ["all"],
-      "benefits": ["çözücü"],
-      "allergens": []
+      "benefits": [],
+      "allergens": ["parfüm", "linalool"]
     }
   ]
 }
@@ -231,11 +240,16 @@ Yanıt 200:
 | `q` | Ad ve INCI adı üzerinde serbest metin araması |
 | `skin_type` | O cilt tipine uygun (veya `all` etiketli) içerikleri tutar |
 | `avoid_allergens` | Virgülle ayrılır; bu alerjenleri taşıyan içerikleri eler |
-| `max_concern` | Risk seviyesi üst sınırı |
+| `max_concern` | Risk seviyesi üst sınırı; **puanlanmamış içerikler elenir** |
 | `limit` / `offset` | Sayfalama (varsayılan 50, en fazla 200) |
 
 `skin_type` geçersizse `400` ve geçerli değerleri Türkçe karşılıklarıyla
 listeleyen bir mesaj döner.
+
+`max_concern` verildiğinde puanı olmayan içerikler süzgeçten geçmez —
+bilinmeyen bir puanı "yeterince düşük" saymak, olmayan bir güvence vermek
+olurdu. Kaç tanesinin elendiği `unscored_excluded` ile bildirilir ve arayüzde
+gösterilmesi zorunludur: aksi halde liste tam sanılır.
 
 ### Tek içerik getir
 ```
@@ -243,17 +257,45 @@ GET /ingredients/:id
 
 Yanıt 200:
 {
-  "id": 34,
-  "name": "Parfüm",
-  "inci_name": "Parfum (Fragrance)",
-  "description": "İçeriği açıklanmayan koku karışımı; en yaygın kozmetik alerjeni.",
-  "concern_level": 8,
+  "id": 20,
+  "name": "Linalool",
+  "inci_name": "Linalool",
+  "description": "Okside olduğunda hassasiyet yaratan koku bileşeni.",
+  "concern_level": 7,
+  "score_version": 1,
+  "score_sources": ["AB Tüzüğü 1223/2009 Ek III — kısıtlı maddeler, giriş 84 — https://..."],
   "skin_types": [],
   "benefits": [],
-  "allergens": ["parfüm"],
-  "products_count": 5
+  "allergens": ["parfüm", "linalool"],
+  "products_count": 5,
+  "scoring": {
+    "version": 1,
+    "value": 7,
+    "rules": [
+      {
+        "key": "declarable_allergen",
+        "score": 7,
+        "rationale": "Etikette beyanı zorunlu tutulan temas alerjeni (Ek III)"
+      }
+    ],
+    "sources": ["AB Tüzüğü 1223/2009 Ek III — kısıtlı maddeler, giriş 84 — https://..."],
+    "regulatory": {
+      "annex": "III",
+      "annex_entry": "84",
+      "restriction": "Etikette beyanı zorunlu; yıkanan üründe %0,001 ...",
+      "declarable_allergen": true,
+      "sccs_adverse": false,
+      "source_url": "https://eur-lex.europa.eu/legal-content/TR/TXT/?uri=CELEX:32009R1223",
+      "fetched_at": "..."
+    }
+  }
 }
 ```
+
+`scoring`, arayüzdeki **"neden bu puan?"** açıklamasıdır ve yalnızca bu uç
+noktada döner. Puanı olmayan içerikte alan hiç gelmez, `concern_level` null
+olur. Puan hiçbir yerde gerekçesiz gösterilmez: dayanağını gösteremeyen bir
+puan, elle atanmış bir puandan farksızdır.
 
 ---
 
@@ -273,10 +315,10 @@ Yanıt 200:
   "product_id": 1,
   "product_name": "Işıltılı İpek Fondöten SPF 20",
   "matches": [
-    { "allergen": "parfüm", "ingredient": "Parfüm",         "severity": 8, "concern_level": 8 },
-    { "allergen": "parfüm", "ingredient": "Linalool",       "severity": 6, "concern_level": 5 },
-    { "allergen": "nikel",  "ingredient": "Mika",           "severity": 4, "concern_level": 2 },
-    { "allergen": "nikel",  "ingredient": "Demir Oksitler", "severity": 3, "concern_level": 1 }
+    { "allergen": "parfüm", "ingredient": "Parfüm",         "severity": 8, "concern_level": null },
+    { "allergen": "parfüm", "ingredient": "Linalool",       "severity": 6, "concern_level": 7 },
+    { "allergen": "nikel",  "ingredient": "Mika",           "severity": 4, "concern_level": 3 },
+    { "allergen": "nikel",  "ingredient": "Demir Oksitler", "severity": 3, "concern_level": 3 }
   ],
   "safe": false,
   "flags": ["parfüm içeriyor", "nikel içeriyor"]
@@ -352,7 +394,27 @@ category, description, source_url, created_at, updated_at
 ### Ingredient
 ```
 id, name (Türkçe yaygın ad), inci_name (uluslararası standart),
-description, concern_level (1-10 EWG), created_at, updated_at
+description, concern_level (1-10, TÜRETİLMİŞ; puanlanmamışsa NULL),
+score_version, score_sources, created_at, updated_at
+```
+
+`concern_level` elle atanmaz: AB Tüzüğü 1223/2009 Eklerinden
+(`ingredient_regulatory`) ve versiyonlu `scoring_rule` rubriğinden türetilir.
+Türetme `backend/scoring` paketindedir, `go run ./cmd/score` ile uygulanır.
+Mevzuat kaydı olmayan içerikte **null** kalır — 0 değil: "puanlanmadı" ile
+"risksiz" aynı şey değildir.
+
+### IngredientRegulatory
+```
+ingredient_id, cas_number, ec_number, annex (II/III/IV/V/VI), annex_entry,
+restriction, max_concentration, declarable_allergen, sccs_opinion,
+sccs_adverse, source_url, fetched_at
+```
+
+### ScoringRule
+```
+id, version, rule_key, score, rationale
+unique(version, rule_key)
 ```
 
 ### ProductIngredient

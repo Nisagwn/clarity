@@ -22,9 +22,27 @@ Bu komut PostgreSQL 16'yı başlatır. Şema **göçlerle** yüklenir:
 
 ```bash
 make migrate          # bekleyen göçleri uygular
-make seed             # örnek veriyi yükler (idempotent)
+make seed             # örnek veriyi yükler ve puanları türetir (idempotent)
+make score            # puanları mevzuat verisinden yeniden türetir
 make migrate-version  # mevcut şema sürümü
 ```
+
+**Puanlar elle atanmaz.** `concern_level`, AB Tüzüğü 1223/2009 Eklerinden
+(`ingredient_regulatory`) ve versiyonlu `scoring_rule` rubriğinden türetilir;
+`make score` bunu tüm katalog üzerinde çalıştırır. Mevzuat kaydı olmayan
+içerik puansız kalır ve arayüzde "henüz puanlanmadı" görünür — uydurulmuş bir
+puan, eksik bir puandan daha zararlıdır.
+
+Katalogu genişletmek için CosIng dışa aktarımı içe alınır (dosyalar
+[ec.europa.eu/growth/tools-databases/cosing](https://ec.europa.eu/growth/tools-databases/cosing/)
+adresinden kayıtsız indirilir):
+
+```bash
+make import-cosing FILE=~/COSING_Annex_III_v2.csv ANNEX=III
+```
+
+Eşleşmeyen satırlar sessizce atlanmaz: sayıları özette görünür, tamamı
+`backend/unmatched.csv` dosyasına yazılır.
 
 `make up` zaten göçleri de çalıştırır.
 
@@ -64,11 +82,16 @@ backend/
 │   ├── profiles.go
 │   └── recommendations.go
 ├── models/          Paylaşılan alan tipleri
-├── middleware/      CORS
-├── cmd/migrate/     Göç komutu
+├── middleware/      CORS ve oturum doğrulama
+├── scoring/         Puanlama rubriği: mevzuat olgularından puan türetme
+├── cmd/
+│   ├── migrate/     Göç komutu
+│   └── score/       Puanları tüm katalog üzerinde yeniden türetir
+├── scripts/
+│   └── import-cosing/  CosIng dışa aktarımını ingredient_regulatory'ye alır
 └── db/
     ├── migrations/  Sıralı şema göçleri
-    └── seed.sql     Örnek veri
+    └── seed.sql     Örnek veri + mevzuat kayıtları
 ```
 
 ### Ortam değişkenleri
@@ -151,7 +174,7 @@ Arayüz, dokümanlar, kod yorumları ve örnek veri Türkçedir. Bilinçli olara
 - [ ] En popüler 50–100 ürünü elle ekle
 - [ ] İlk 200 içeriğin küratörlüğü
 - [ ] İçerikleri ürünlerle eşle
-- [ ] Her içerik için EWG güvenlik puanı
+- [ ] Her içerik için mevzuata bağlı güvenlik puanı (CosIng içe aktarımı)
 - [ ] Temel alerjen ilişkilendirmeleri
 
 ### Faz 1D: Test ve cila

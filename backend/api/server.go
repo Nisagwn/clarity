@@ -5,23 +5,49 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"strconv"
+	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/nisa/beauty-ingredient/middleware"
+	"github.com/nisa/beauty-ingredient/scoring"
 )
 
 // Server, tüm işleyicilerin paylaştığı bağımlılıkları taşır.
 type Server struct {
 	DB *sql.DB
+
+	// Puanlama rubrikleri sürüm başına bir kez okunur: kural kümesi yalnızca
+	// göçle değişir, her istekte sorgulamak boşuna tur olurdu.
+	rubricMu sync.Mutex
+	rubrics  map[int]*scoring.Rubric
 }
 
 // New, db ile desteklenen bir Server oluşturur.
 func New(db *sql.DB) *Server {
-	return &Server{DB: db}
+	return &Server{DB: db, rubrics: map[int]*scoring.Rubric{}}
+}
+
+// rubric, verilen sürümün puanlama rubriğini döndürür ve önbelleğe alır.
+func (s *Server) rubric(ctx context.Context, version int) (*scoring.Rubric, error) {
+	s.rubricMu.Lock()
+	defer s.rubricMu.Unlock()
+
+	if r, ok := s.rubrics[version]; ok {
+		return r, nil
+	}
+
+	r, err := scoring.LoadRubric(ctx, s.DB, version)
+	if err != nil {
+		return nil, err
+	}
+	s.rubrics[version] = r
+	return r, nil
 }
 
 // RegisterRoutes, docs/API_SPEC.md'de tanımlanan tüm uç noktaları bağlar.
@@ -87,6 +113,14 @@ func notFound(c *gin.Context, msg string) {
 
 func serverError(c *gin.Context, err error) {
 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+}
+
+// whereClause, koşulları tek bir WHERE cümlesine bağlar; koşul yoksa boş döner.
+func whereClause(conditions []string) string {
+	if len(conditions) == 0 {
+		return ""
+	}
+	return " WHERE " + strings.Join(conditions, " AND ")
 }
 
 // idParam, yoldan pozitif tam sayı bir parametre okur.

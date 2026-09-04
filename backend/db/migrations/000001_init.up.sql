@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS ingredients (
     name VARCHAR(255) NOT NULL UNIQUE,
     inci_name VARCHAR(255),
     description TEXT,
-    concern_level INT DEFAULT 0, -- EWG ölçeği 1-10
+    concern_level INT DEFAULT 0, -- 1-10 endişe seviyesi (000005 ile türetilmiş hale geldi)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

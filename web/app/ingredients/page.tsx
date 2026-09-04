@@ -25,6 +25,7 @@ export default async function IngredientsPage({
 
   let ingredients: Ingredient[] = []
   let total = 0
+  let unscoredExcluded = 0
   let error = ''
 
   try {
@@ -37,6 +38,7 @@ export default async function IngredientsPage({
     })
     ingredients = data.ingredients
     total = data.total
+    unscoredExcluded = data.unscored_excluded
   } catch (err) {
     error =
       err instanceof ApiError
@@ -155,14 +157,25 @@ export default async function IngredientsPage({
         </div>
       ) : (
         <>
-          <p className="text-sm text-ink-muted mb-4">
+          <p className="text-sm text-ink-muted mb-2">
             Filtrelerine {total} içerik uyuyor
             {ingredients.length < total &&
               ` (ilk ${ingredients.length} tanesi gösteriliyor)`}
           </p>
 
+          {/* Puansız içeriklerin risk seviyesi filtresinde elenmesi
+              söylenmek zorunda: aksi halde liste tam sanılır. */}
+          {unscoredExcluded > 0 && (
+            <p className="text-sm text-espresso/80 mb-4 p-3 bg-brand-50 border border-brand-100 rounded-lg">
+              Risk seviyesi filtresi, mevzuat kaydı olmadığı için henüz
+              puanlanmamış {unscoredExcluded} içeriği listeden çıkardı. Bu
+              içeriklerin riskli olduğu anlamına gelmez — puanlarının
+              bilinmediği anlamına gelir.
+            </p>
+          )}
+
           {ingredients.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-brand-200 rounded-xl text-mauve">
+            <div className="p-8 text-center border border-dashed border-brand-200 rounded-xl text-ink-muted">
               Hiçbir içerik eşleşmedi. Bir filtreyi gevşetmeyi deneyin.
             </div>
           ) : (

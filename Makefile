@@ -1,4 +1,4 @@
-.PHONY: help setup up down backend frontend migrate migrate-down migrate-version db-reset db-shell seed test test-db-up test-db-down lint build clean
+.PHONY: help setup up down backend frontend migrate migrate-down migrate-version db-reset db-shell seed score import-cosing test test-db-up test-db-down lint build clean
 
 # Veritabanı Docker'da çalışır; yerel PostgreSQL kurulumuna gerek yoktur.
 COMPOSE      := docker compose
@@ -18,7 +18,9 @@ help:
 	@echo "make migrate-down - Son göçü geri al"
 	@echo "make db-shell   - Konteynerde psql kabuğu aç"
 	@echo "make db-reset   - Volume'ü sil, şemayı ve örnek veriyi yeniden yükle (DİKKAT)"
-	@echo "make seed       - Örnek veriyi yeniden uygula (idempotent)"
+	@echo "make seed       - Örnek veriyi yeniden uygula ve puanları türet (idempotent)"
+	@echo "make score      - Puanları mevzuat verisinden yeniden türet"
+	@echo "make import-cosing FILE=... ANNEX=III - CosIng dışa aktarımını içe al"
 	@echo "make test       - Backend testlerini çalıştır"
 	@echo "make lint       - Go kodunu vet'le ve ön yüzü lint'le"
 	@echo "make build      - API ikilisini ve Next.js paketini derle"
@@ -70,9 +72,22 @@ db-reset:
 	$(MAKE) up
 	$(MAKE) seed
 
+# Seed puan yazmaz; yalnızca puanın dayanağını (ingredient_regulatory) kurar.
+# Puanlar hemen ardından mevzuat verisinden türetilir.
 seed:
 	$(PSQL) < backend/db/seed.sql
 	@echo "Örnek veri uygulandı"
+	$(MAKE) score
+
+score:
+	cd backend && go run ./cmd/score
+
+# CosIng dosyaları elle indirilir: https://ec.europa.eu/growth/tools-databases/cosing/
+#   make import-cosing FILE=~/COSING_Annex_III_v2.csv ANNEX=III
+import-cosing:
+	@test -n "$(FILE)" || (echo "FILE gerekli: make import-cosing FILE=... ANNEX=III"; exit 1)
+	cd backend && go run ./scripts/import-cosing -file "$(FILE)" -annex "$(ANNEX)" -report unmatched.csv
+	$(MAKE) score
 
 test: test-db-up
 	cd backend && TEST_DATABASE_URL=$(TEST_DSN) go test ./... -count=1

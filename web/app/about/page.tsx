@@ -21,10 +21,47 @@ export default function AboutPage() {
       <section>
         <h2 className="text-2xl font-bold mb-3">Puanlar nasıl çalışır?</h2>
         <p className="text-espresso/80 leading-relaxed">
-          Her içerik 1 ile 10 arasında bir risk seviyesi taşır; bu, EWG Skin
-          Deep veritabanının kullandığı geleneği izler. Düşük olan daha iyidir.
-          Yüksek bir sayı, o içeriğin bitmiş bir üründeki oranında tehlikeli
-          olduğu anlamına gelmez — bilinmeye değer olduğu anlamına gelir.
+          Her puan, AB Kozmetik Tüzüğü 1223/2009&apos;un Eklerinden{' '}
+          <strong>türetilir</strong>: bir madde yasaklıysa, kısıtlıysa ya da
+          etikette beyanı zorunlu bir koku alerjeniyse, puanı bunu yansıtır.
+          Elle atadığımız hiçbir sayı yok — her içeriğin sayfasında{' '}
+          <em>&ldquo;Neden bu puan?&rdquo;</em> bağlantısı puanı üreten kuralı
+          ve mevzuat maddesini gösterir. Düşük olan daha iyidir. Yüksek bir
+          sayı, içeriğin bitmiş üründeki oranında tehlikeli olduğu anlamına
+          gelmez — mevzuatın onu kısıtladığı anlamına gelir.
+        </p>
+
+        <table className="w-full mt-4 text-sm border border-brand-100 rounded-lg overflow-hidden">
+          <caption className="sr-only">Puanlama rubriği, sürüm 1</caption>
+          <thead className="bg-brand-50 text-left">
+            <tr>
+              <th scope="col" className="px-3 py-2 font-semibold">Durum</th>
+              <th scope="col" className="px-3 py-2 font-semibold">Puan</th>
+            </tr>
+          </thead>
+          <tbody className="text-espresso/80">
+            {[
+              ['Ek II — AB’de kozmetikte kullanımı yasak', '10'],
+              ['Ek III — etikette beyanı zorunlu koku alerjeni', '7'],
+              ['Ek III — konsantrasyon sınırlı', '5'],
+              ['Ek V / VI — koşullu izinli koruyucu veya UV filtresi', '4'],
+              ['Ek IV — izinli renklendirici', '3'],
+              ['Eklerde kısıtlama kaydı yok', '2'],
+              ['SCCS olumsuz görüş bildirdi', '+2'],
+            ].map(([condition, score]) => (
+              <tr key={condition} className="border-t border-brand-100">
+                <td className="px-3 py-2">{condition}</td>
+                <td className="px-3 py-2 font-semibold tabular-nums">{score}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <p className="text-espresso/80 leading-relaxed mt-4">
+          Mevzuatta kaydı olmayan içerikler <strong>puansız kalır</strong> ve
+          &ldquo;henüz puanlanmadı&rdquo; olarak görünür. Dayanağı olmayan bir
+          sayı uydurmaktansa boş bırakmayı tercih ediyoruz: sıfır göstermek, o
+          içeriği ölçeğin en güvenli ucuna yerleştirmek olurdu.
         </p>
       </section>
 
