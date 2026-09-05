@@ -44,6 +44,25 @@ make import-cosing FILE=~/COSING_Annex_III_v2.csv ANNEX=III
 Eşleşmeyen satırlar sessizce atlanmaz: sayıları özette görünür, tamamı
 `backend/unmatched.csv` dosyasına yazılır.
 
+### Ürün kataloğu
+
+Katalog [Open Beauty Facts](https://world.openbeautyfacts.org)'ten gelir —
+ODbL 1.0 lisanslı, anahtarsız. Toplu dosya indirilip içe aktarılır:
+
+```bash
+curl -O https://static.openbeautyfacts.org/data/openbeautyfacts-products.jsonl.gz
+make import-obf FILE=openbeautyfacts-products.jsonl.gz LIMIT=5000
+```
+
+Lisans atıf gerektirir; bu yüzden her ürün `source`, `source_id`, `license` ve
+`source_url` taşır ve arayüz ürün sayfasında kaynağı gösterir. Atıfsız
+gösterim lisans ihlalidir.
+
+Kayıtların üçte ikisi kullanılamaz (içerik listesi, ad veya marka eksik) ve
+alınmaz; `-limit` okunan satırı değil ALINAN ürünü sayar. İçerik listesi
+üçten az olan ürünler `data_quality = 'incomplete'` etiketiyle kaydedilir:
+katalogda görünür ama muadil hesabına girmezler.
+
 `make up` zaten göçleri de çalıştırır.
 
 ```bash
@@ -84,11 +103,13 @@ backend/
 ├── models/          Paylaşılan alan tipleri
 ├── middleware/      CORS ve oturum doğrulama
 ├── scoring/         Puanlama rubriği: mevzuat olgularından puan türetme
+├── inci/            INCI adı normalleştirme ve etiket listesi ayrıştırma
 ├── cmd/
 │   ├── migrate/     Göç komutu
 │   └── score/       Puanları tüm katalog üzerinde yeniden türetir
 ├── scripts/
-│   └── import-cosing/  CosIng dışa aktarımını ingredient_regulatory'ye alır
+│   ├── import-cosing/  CosIng dışa aktarımını ingredient_regulatory'ye alır
+│   └── import-obf/     Open Beauty Facts ürün kataloğunu içe aktarır
 └── db/
     ├── migrations/  Sıralı şema göçleri
     └── seed.sql     Örnek veri + mevzuat kayıtları

@@ -77,24 +77,8 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-var (
-	parenthetical = regexp.MustCompile(`\([^)]*\)`)
-	nonAlphaNum   = regexp.MustCompile(`[^\p{L}\p{N}]+`)
-	leadingNumber = regexp.MustCompile(`^[0-9]+(?:[.,][0-9]+)?`)
-)
-
-// normalizeINCI, iki INCI adını karşılaştırılabilir hale getirir.
-//
-// Katalogdaki "Titanium Dioxide (CI 77891)" ile CosIng'deki "Titanium dioxide"
-// aynı maddedir; parantez içi ekler, noktalama ve büyük/küçük harf farkı
-// eşleşmeyi engellememelidir. Eşleştirme yine de TAM eşleşmedir: alt dize
-// karşılaştırması "Alcohol" ile "Alcohol denat."ı birbirine karıştırırdı.
-func normalizeINCI(s string) string {
-	s = strings.ToLower(strings.TrimSpace(s))
-	s = parenthetical.ReplaceAllString(s, " ")
-	s = nonAlphaNum.ReplaceAllString(s, " ")
-	return strings.Join(strings.Fields(s), " ")
-}
+// leadingNumber, "1 %" gibi değerlerin başındaki sayıyı yakalar.
+var leadingNumber = regexp.MustCompile(`^[0-9]+(?:[.,][0-9]+)?`)
 
 // normalizeAnnex, "Annex III", "ek iii", "III" yazımlarını tek biçime getirir.
 func normalizeAnnex(s string) string {

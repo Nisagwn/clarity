@@ -53,13 +53,24 @@ export interface Product {
   name: string
   brand: string
   gtin?: string
-  price: number
+  /** Fiyat bilinmiyorsa null. Open Beauty Facts fiyat taşımıyor; 0 göstermek
+   *  ürünü bedava sanmaya davet ederdi. */
+  price: number | null
   currency: string
   image_url?: string
   category?: string
   description?: string
   source_url?: string
   ingredients?: Ingredient[]
+  /** Veri kaynağı ('openbeautyfacts', 'seed', 'manual') ve lisansı.
+   *  ODbL atıf zorunlu kıldığı için arayüzde gösterilmek üzere geliyor. */
+  source?: string
+  source_id?: string
+  license?: string
+  verified_at?: string
+  /** 'incomplete' ise içerik listesi eksik: ürün gösterilir ama muadil
+   *  hesabına girmez. */
+  data_quality?: 'ok' | 'incomplete'
   created_at: string
 }
 
@@ -96,7 +107,7 @@ export interface Recommendation {
   type: 'dupe' | 'alternative'
   name: string
   brand: string
-  price: number
+  price: number | null
   currency: string
   image_url?: string
   similarity_score: number
@@ -222,6 +233,18 @@ export interface ProductListResponse {
   limit: number
   offset: number
   products: Product[]
+}
+
+export interface ProductCategory {
+  name: string
+  product_count: number
+}
+
+/** Katalogdaki kategoriler ve ürün sayıları; süzgeç listesini besler. */
+export function listCategories() {
+  return apiFetch<{ categories: ProductCategory[] }>('/products/categories', {
+    cache: 'no-store',
+  })
 }
 
 export function listProducts(params: { q?: string; category?: string; limit?: number } = {}) {
@@ -360,7 +383,9 @@ export function concernScore(level: number | null): string {
   return level === null ? '—' : `${level}/10`
 }
 
-export function formatPrice(price: number, currency: string): string {
+/** Fiyat bilinmiyorsa sayı uydurulmaz: gerçek katalogda fiyat verisi yok. */
+export function formatPrice(price: number | null, currency: string): string {
+  if (price === null || price === undefined) return 'Fiyat bilgisi yok'
   try {
     return new Intl.NumberFormat('tr-TR', {
       style: 'currency',
@@ -369,4 +394,22 @@ export function formatPrice(price: number, currency: string): string {
   } catch {
     return `${price.toFixed(2)} ${currency}`
   }
+}
+
+/** Kaynak veri kümelerinin adı ve lisans bağlantısı. ODbL ve CC-BY-SA atıf
+ *  gerektiriyor; ürün sayfaları bu bilgiyi göstermek zorunda. */
+export const DATA_SOURCES: Record<
+  string,
+  { label: string; url: string; license: string; licenseUrl: string }
+> = {
+  openbeautyfacts: {
+    label: 'Open Beauty Facts',
+    url: 'https://world.openbeautyfacts.org',
+    license: 'ODbL 1.0',
+    licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
+  },
+}
+
+export function dataSource(source?: string) {
+  return source ? DATA_SOURCES[source] : undefined
 }

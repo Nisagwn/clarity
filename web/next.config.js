@@ -5,7 +5,9 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
-      // Add Sephora, Ulta, Turkish platforms here in Phase 2
+      // Open Beauty Facts ürün görselleri (CC-BY-SA; atıf ürün sayfasında)
+      { protocol: 'https', hostname: 'images.openbeautyfacts.org' },
+      { protocol: 'https', hostname: 'images.openfoodfacts.org' },
     ],
   },
 }

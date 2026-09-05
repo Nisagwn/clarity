@@ -1,4 +1,4 @@
-.PHONY: help setup up down backend frontend migrate migrate-down migrate-version db-reset db-shell seed score import-cosing test test-db-up test-db-down lint build clean
+.PHONY: help setup up down backend frontend migrate migrate-down migrate-version db-reset db-shell seed score import-cosing import-obf test test-db-up test-db-down lint build clean
 
 # Veritabanı Docker'da çalışır; yerel PostgreSQL kurulumuna gerek yoktur.
 COMPOSE      := docker compose
@@ -21,6 +21,7 @@ help:
 	@echo "make seed       - Örnek veriyi yeniden uygula ve puanları türet (idempotent)"
 	@echo "make score      - Puanları mevzuat verisinden yeniden türet"
 	@echo "make import-cosing FILE=... ANNEX=III - CosIng dışa aktarımını içe al"
+	@echo "make import-obf FILE=... LIMIT=5000 - Open Beauty Facts kataloğunu içe al"
 	@echo "make test       - Backend testlerini çalıştır"
 	@echo "make lint       - Go kodunu vet'le ve ön yüzü lint'le"
 	@echo "make build      - API ikilisini ve Next.js paketini derle"
@@ -87,6 +88,14 @@ score:
 import-cosing:
 	@test -n "$(FILE)" || (echo "FILE gerekli: make import-cosing FILE=... ANNEX=III"; exit 1)
 	cd backend && go run ./scripts/import-cosing -file "$(FILE)" -annex "$(ANNEX)" -report unmatched.csv
+	$(MAKE) score
+
+# Katalog verisi Open Beauty Facts'ten gelir (ODbL). Toplu dosya:
+#   https://static.openbeautyfacts.org/data/openbeautyfacts-products.jsonl.gz
+#   make import-obf FILE=~/openbeautyfacts-products.jsonl.gz LIMIT=5000
+import-obf:
+	@test -n "$(FILE)" || (echo "FILE gerekli: make import-obf FILE=... LIMIT=5000"; exit 1)
+	cd backend && go run ./scripts/import-obf -file "$(FILE)" -limit $(or $(LIMIT),1000)
 	$(MAKE) score
 
 test: test-db-up

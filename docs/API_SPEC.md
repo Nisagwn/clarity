@@ -201,6 +201,22 @@ Yanıt 200: { "product_id": 1, "linked": 4 }
 ```
 Dizideki sıra `order_index` olarak kaydedilir.
 
+### Kategorileri listele
+```
+GET /products/categories
+
+Yanıt 200:
+{
+  "categories": [
+    { "name": "oje", "product_count": 1043 },
+    { "name": "ruj", "product_count": 412 }
+  ]
+}
+```
+Ürün sayısına göre azalan sırada, en fazla 100 kategori. Katalog binlerce
+ürüne çıktığı için süzgeç listesi bu uç noktadan besleniyor; sayılar da bilgi:
+kataloğun nerede kalın, nerede ince olduğunu gösteriyor.
+
 ---
 
 ## İçerikler
@@ -388,8 +404,22 @@ Kolon adları veritabanı şemasıyla birebir aynıdır; ayrıntı için
 ### Product
 ```
 id, name, brand, gtin, price, currency, image_url,
-category, description, source_url, created_at, updated_at
+category, description, source_url,
+source, source_id, license, verified_at, data_quality,
+created_at, updated_at
 ```
+
+`price` **null olabilir**: katalog verisinin kaynağı olan Open Beauty Facts
+fiyat taşımıyor ve 0 göstermek ürünü bedava sanmaya davet ederdi.
+
+`source` / `license` / `source_url` lisans yükümlülüğüdür, süs değil: katalog
+ODbL 1.0 altında ve atıf zorunlu. Veriyi gösteren her arayüz kaynağı da
+göstermek zorunda.
+
+`data_quality`: `ok` veya `incomplete`. Üçten az içerik listelenmiş ürünler
+`incomplete` olur; katalogda görünürler ama **muadil hesabına girmezler** —
+iki kısa listenin Jaccard benzerliği yüksek çıkar ve bu benzerlik değil, veri
+eksikliğidir.
 
 ### Ingredient
 ```

@@ -58,6 +58,7 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 	r.POST("/products", s.CreateProduct)
 	r.GET("/products", s.ListProducts)
 	r.GET("/products/search", s.SearchProducts)
+	r.GET("/products/categories", s.ListCategories)
 	r.GET("/products/brand/:brand", s.GetProductsByBrand)
 	r.GET("/products/:id", s.GetProduct)
 	r.GET("/products/:id/dupes", s.GetDupes)

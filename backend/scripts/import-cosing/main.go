@@ -43,6 +43,8 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+
+	"github.com/nisa/beauty-ingredient/inci"
 )
 
 // defaultSourceURL, mevzuatın kendisine işaret eder; her puanın yanında
@@ -161,14 +163,14 @@ func run(ctx context.Context, db *sql.DB, opt options) error {
 	merged := map[int]record{}
 
 	for _, row := range rows {
-		inci := strings.TrimSpace(field(row, cols, "inci"))
-		if inci == "" {
+		name := strings.TrimSpace(field(row, cols, "inci"))
+		if name == "" {
 			continue
 		}
 
-		entry, ok := catalog[normalizeINCI(inci)]
+		entry, ok := catalog[inci.Normalize(name)]
 		if !ok {
-			sum.unmatched = append(sum.unmatched, []string{inci, "katalogda karşılığı yok"})
+			sum.unmatched = append(sum.unmatched, []string{name, "katalogda karşılığı yok"})
 			continue
 		}
 
@@ -319,16 +321,16 @@ func loadCatalog(ctx context.Context, db *sql.DB) (map[string]catalogEntry, []st
 
 	for rows.Next() {
 		var (
-			id         int
-			name, inci string
+			id             int
+			name, inciName string
 		)
-		if err := rows.Scan(&id, &name, &inci); err != nil {
+		if err := rows.Scan(&id, &name, &inciName); err != nil {
 			return nil, nil, err
 		}
 
-		key := normalizeINCI(inci)
+		key := inci.Normalize(inciName)
 		if key == "" {
-			key = normalizeINCI(name)
+			key = inci.Normalize(name)
 		}
 		if key == "" {
 			continue

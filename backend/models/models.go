@@ -74,19 +74,33 @@ func (r Regulatory) Facts() scoring.Facts {
 
 // Product, bir makyaj ürünü ve istendiğinde içerik listesidir.
 type Product struct {
-	ID          int          `json:"id"`
-	Name        string       `json:"name"`
-	Brand       string       `json:"brand"`
-	GTIN        string       `json:"gtin,omitempty"`
-	Price       float64      `json:"price"`
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Brand string `json:"brand"`
+	GTIN  string `json:"gtin,omitempty"`
+	// Fiyat bilinmiyorsa null. Open Beauty Facts fiyat taşımıyor; 0 göstermek
+	// ürünü bedava sanmaya davet ederdi. Fiyat takibi Faz 9'da.
+	Price       *float64     `json:"price"`
 	Currency    string       `json:"currency"`
 	ImageURL    string       `json:"image_url,omitempty"`
 	Category    string       `json:"category,omitempty"`
 	Description string       `json:"description,omitempty"`
 	SourceURL   string       `json:"source_url,omitempty"`
 	Ingredients []Ingredient `json:"ingredients,omitempty"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at,omitempty"`
+
+	// Kaynak ve lisans. ODbL atıf gerektiriyor: veriyi gösteren her yer
+	// nereden geldiğini söylemek zorunda, bu yüzden alanlar API sözleşmesinin
+	// parçası.
+	Source     string     `json:"source,omitempty"`
+	SourceID   string     `json:"source_id,omitempty"`
+	License    string     `json:"license,omitempty"`
+	VerifiedAt *time.Time `json:"verified_at,omitempty"`
+	// DataQuality "ok" veya "incomplete". Eksik içerik listeli ürünler
+	// katalogda görünür ama muadil hesabına girmez.
+	DataQuality string `json:"data_quality"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
 // UserProfile, kullanıcının cilt profili ve kaçındığı alerjenlerdir.
@@ -109,15 +123,15 @@ type AllergenMatch struct {
 
 // Recommendation, bir ürün için önerilen muadil ya da alternatiftir.
 type Recommendation struct {
-	ID              int     `json:"id"`
-	Type            string  `json:"type"` // dupe | alternative
-	Name            string  `json:"name"`
-	Brand           string  `json:"brand"`
-	Price           float64 `json:"price"`
-	Currency        string  `json:"currency"`
-	ImageURL        string  `json:"image_url,omitempty"`
-	SimilarityScore float64 `json:"similarity_score"`
-	Reason          string  `json:"reason"`
+	ID              int      `json:"id"`
+	Type            string   `json:"type"` // dupe | alternative
+	Name            string   `json:"name"`
+	Brand           string   `json:"brand"`
+	Price           *float64 `json:"price"`
+	Currency        string   `json:"currency"`
+	ImageURL        string   `json:"image_url,omitempty"`
+	SimilarityScore float64  `json:"similarity_score"`
+	Reason          string   `json:"reason"`
 }
 
 // ValidSkinTypes, profillerde ve filtrelerde kabul edilen cilt tipleridir.

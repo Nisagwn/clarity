@@ -29,7 +29,7 @@ const dupeQuery = `
 	    SELECT p.id,
 	           p.name,
 	           p.brand,
-	           COALESCE(p.price, 0)      AS price,
+	           p.price,
 	           COALESCE(p.currency, 'USD') AS currency,
 	           COALESCE(p.image_url, '')  AS image_url,
 	           COALESCE(p.category, '')   AS category,
@@ -38,6 +38,10 @@ const dupeQuery = `
 	    FROM products p
 	    JOIN product_ingredients pi ON pi.product_id = p.id
 	    WHERE p.id <> $1
+	      -- Eksik içerik listeli ürünler aday olamaz: iki kısa listenin
+	      -- Jaccard benzerliği yüksek çıkar ve bu benzerlik değil, veri
+	      -- eksikliğidir.
+	      AND p.data_quality <> 'incomplete'
 	    GROUP BY p.id
 	)
 	SELECT c.id, c.name, c.brand, c.price, c.currency, c.image_url, c.category,
@@ -47,18 +51,21 @@ const dupeQuery = `
 	       (SELECT category FROM target_meta) AS target_category
 	FROM candidate c
 	WHERE c.shared > 0
+	  -- Alerjen elemesi kanonik sözlükten TAM eşleşmeyle yapılır. Alt dize
+	  -- karşılaştırması "alkol" arayan kullanıcıya alerjeni "yün alkolü" olan
+	  -- Lanolin'i eledirirdi; Faz 1'de alerjen kontrolünde düzeltilen hata
+	  -- muadil sorgusunda kalmıştı.
 	  AND ($3::text[] IS NULL OR NOT EXISTS (
 	      SELECT 1
 	      FROM product_ingredients pi2
 	      JOIN ingredient_allergens ia ON ia.ingredient_id = pi2.ingredient_id
+	      JOIN allergen_alias ing_alias ON LOWER(ing_alias.alias) = LOWER(ia.allergen_name)
+	      JOIN allergen_alias user_alias ON user_alias.canonical_id = ing_alias.canonical_id
 	      WHERE pi2.product_id = c.id
-	        AND EXISTS (
-	            SELECT 1 FROM UNNEST($3::text[]) AS ua(term)
-	            WHERE LOWER(ia.allergen_name) LIKE '%' || ua.term || '%'
-	               OR ua.term LIKE '%' || LOWER(ia.allergen_name) || '%'
-	        )
+	        AND LOWER(user_alias.alias) = ANY($3::text[])
 	  ))
-	ORDER BY similarity DESC, ABS(c.price - (SELECT price FROM target_meta)) ASC
+	ORDER BY similarity DESC,
+	         ABS(c.price - (SELECT price FROM target_meta)) ASC NULLS LAST
 	LIMIT $2`
 
 // recommend, muadil sorgusunu çalıştırır ve her sonucu etiketler.
@@ -80,7 +87,7 @@ func (s *Server) recommend(ctx context.Context, productID, topN int, allergens [
 			r              models.Recommendation
 			category       string
 			similarity     sql.NullFloat64
-			targetPrice    float64
+			targetPrice    *float64
 			targetCategory string
 		)
 		if err := rows.Scan(
@@ -101,10 +108,14 @@ func (s *Server) recommend(ctx context.Context, productID, topN int, allergens [
 			r.Type = "alternative"
 		}
 
+		// Fiyat karşılaştırması yalnızca iki fiyat da biliniyorsa yapılır:
+		// bilinmeyen fiyatı 0 sayıp "daha ucuz" demek uydurma olurdu.
+		cheaper := r.Price != nil && targetPrice != nil && *r.Price < *targetPrice
+
 		switch {
-		case r.Type == "dupe" && r.Price < targetPrice:
+		case r.Type == "dupe" && cheaper:
 			r.Reason = fmt.Sprintf("%%%.0f içerik örtüşmesi, %.2f %s daha ucuz",
-				r.SimilarityScore*100, targetPrice-r.Price, r.Currency)
+				r.SimilarityScore*100, *targetPrice-*r.Price, r.Currency)
 		case r.Type == "dupe":
 			r.Reason = fmt.Sprintf("%%%.0f içerik örtüşmesi", r.SimilarityScore*100)
 		default:

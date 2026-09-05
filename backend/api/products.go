@@ -18,12 +18,17 @@ import (
 const productColumns = `
 	SELECT p.id, p.name, p.brand,
 	       COALESCE(p.gtin, ''),
-	       COALESCE(p.price, 0),
+	       p.price,
 	       COALESCE(p.currency, 'USD'),
 	       COALESCE(p.image_url, ''),
 	       COALESCE(p.category, ''),
 	       COALESCE(p.description, ''),
 	       COALESCE(p.source_url, ''),
+	       COALESCE(p.source, ''),
+	       COALESCE(p.source_id, ''),
+	       COALESCE(p.license, ''),
+	       p.verified_at,
+	       p.data_quality,
 	       p.created_at,
 	       COALESCE(p.updated_at, p.created_at)
 	FROM products p`
@@ -33,6 +38,7 @@ func scanProduct(scan func(dest ...any) error) (models.Product, error) {
 	err := scan(
 		&p.ID, &p.Name, &p.Brand, &p.GTIN, &p.Price, &p.Currency,
 		&p.ImageURL, &p.Category, &p.Description, &p.SourceURL,
+		&p.Source, &p.SourceID, &p.License, &p.VerifiedAt, &p.DataQuality,
 		&p.CreatedAt, &p.UpdatedAt,
 	)
 	return p, err
@@ -62,6 +68,50 @@ func (s *Server) queryProducts(c *gin.Context, query string, args ...any) ([]mod
 	return products, true
 }
 
+// ListCategories, GET /products/categories isteğini işler: katalogdaki
+// kategoriler ve her birindeki ürün sayısı.
+//
+// Katalog gerçek veriyle binlerce ürüne çıktı; kategori süzgeci olmadan
+// listeyi gezmek mümkün değil. Sayılar da bilgi: "ruj (412)" kullanıcıya
+// kataloğun nerede kalın, nerede ince olduğunu söylüyor.
+func (s *Server) ListCategories(c *gin.Context) {
+	const query = `
+		SELECT category, COUNT(*)
+		FROM products
+		WHERE category IS NOT NULL AND category <> ''
+		GROUP BY category
+		ORDER BY COUNT(*) DESC, category
+		LIMIT 100`
+
+	rows, err := s.DB.QueryContext(c.Request.Context(), query)
+	if err != nil {
+		serverError(c, err)
+		return
+	}
+	defer rows.Close()
+
+	type category struct {
+		Name         string `json:"name"`
+		ProductCount int    `json:"product_count"`
+	}
+
+	categories := []category{}
+	for rows.Next() {
+		var cat category
+		if err := rows.Scan(&cat.Name, &cat.ProductCount); err != nil {
+			serverError(c, err)
+			return
+		}
+		categories = append(categories, cat)
+	}
+	if err := rows.Err(); err != nil {
+		serverError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"categories": categories})
+}
+
 // CreateProduct, POST /products isteğini işler.
 func (s *Server) CreateProduct(c *gin.Context) {
 	var p models.Product
@@ -77,15 +127,17 @@ func (s *Server) CreateProduct(c *gin.Context) {
 		p.Currency = "USD"
 	}
 
+	// Elle eklenen ürün de kaynağını taşır: kataloğun hangi bölümünün içe
+	// aktarımdan, hangisinin elden geldiği ayırt edilebilmeli.
 	const query = `
-		INSERT INTO products (name, brand, gtin, price, currency, image_url, category, description, source_url)
-		VALUES ($1, $2, NULLIF($3, ''), $4, $5, NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''))
-		RETURNING id, created_at, COALESCE(updated_at, created_at)`
+		INSERT INTO products (name, brand, gtin, price, currency, image_url, category, description, source_url, source)
+		VALUES ($1, $2, NULLIF($3, ''), $4, $5, NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), 'manual')
+		RETURNING id, source, data_quality, created_at, COALESCE(updated_at, created_at)`
 
 	err := s.DB.QueryRowContext(c.Request.Context(), query,
 		p.Name, p.Brand, p.GTIN, p.Price, p.Currency,
 		p.ImageURL, p.Category, p.Description, p.SourceURL,
-	).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
+	).Scan(&p.ID, &p.Source, &p.DataQuality, &p.CreatedAt, &p.UpdatedAt)
 
 	var pqErr *pq.Error
 	if errors.As(err, &pqErr) && pqErr.Code.Name() == "unique_violation" {

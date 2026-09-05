@@ -88,11 +88,54 @@ export default function AboutPage() {
       </section>
 
       <section>
+        <h2 className="text-2xl font-bold mb-3">Veri nereden geliyor?</h2>
+        <p className="text-espresso/80 leading-relaxed">
+          Ürün kataloğu{' '}
+          <a
+            href="https://world.openbeautyfacts.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-400 hover:text-brand-500 hover:underline"
+          >
+            Open Beauty Facts
+          </a>
+          &apos;ten geliyor: kozmetik ürünlerin topluluk katkısıyla derlenen
+          açık veritabanı. Veri{' '}
+          <a
+            href="https://opendatacommons.org/licenses/odbl/1-0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-400 hover:text-brand-500 hover:underline"
+          >
+            ODbL 1.0
+          </a>{' '}
+          lisanslıdır; ürün görselleri CC-BY-SA. Bu lisanslar atıf ve aynı
+          lisansla paylaşma gerektirir — bu yüzden her ürün sayfasının altında
+          kaynağı ve lisansı yazıyor, ürünün Open Beauty Facts sayfasına
+          bağlantı veriyoruz.
+        </p>
+        <p className="text-espresso/80 leading-relaxed mt-3">
+          İçerik puanlarının kaynağı ayrıdır ve AB mevzuatıdır (yukarıya bakın).
+          Topluluk verisi eksik olabilir: içerik listesi üçten az olan ürünler
+          <strong> &ldquo;eksik veri&rdquo;</strong> etiketiyle gösterilir ve
+          muadil karşılaştırmasına alınmaz. İki kısa listenin birbirine
+          benzemesi, ürünlerin benzediğini değil, verinin eksik olduğunu
+          gösterir.
+        </p>
+        <p className="text-espresso/80 leading-relaxed mt-3">
+          Open Beauty Facts fiyat verisi taşımıyor; fiyat bilinmeyen ürünlerde
+          rakam uydurmak yerine &ldquo;fiyat bilgisi yok&rdquo; yazıyoruz.
+        </p>
+      </section>
+
+      <section>
         <h2 className="text-2xl font-bold mb-3">Şu anki durum</h2>
         <p className="text-espresso/80 leading-relaxed mb-4">
-          Bu bir Faz 1 MVP&apos;si. Katalog, kurgusal marka adları altında
-          örnek verilerle dolduruldu ve fotoğraf analizi ürünleri hâlâ elle
-          eşleştiriyor — görüntü tanıma Faz 2&apos;de geliyor.
+          Katalog artık gerçek: ürünler Open Beauty Facts&apos;ten geliyor,
+          puanlar AB mevzuatından türetiliyor. Henüz eksik olanlar: fiyat
+          takibi, etiket fotoğrafından içerik okuma ve içeriklerin çoğunun
+          mevzuat eşleşmesi — katalogdaki maddelerin büyük bölümü hâlâ
+          &ldquo;henüz puanlanmadı&rdquo; durumunda.
         </p>
         <Link
           href="/ingredients"

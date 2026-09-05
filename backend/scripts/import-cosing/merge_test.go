@@ -2,39 +2,8 @@ package main
 
 import "testing"
 
-// Katalogdaki INCI adı ile CosIng'deki yazım birebir aynı olmuyor; parantez
-// içi CI numaraları, noktalama ve büyük/küçük harf farkı eşleşmeyi
-// engellememeli.
-func TestNormalizeINCIMatchesCatalogSpelling(t *testing.T) {
-	same := [][2]string{
-		{"Titanium Dioxide (CI 77891)", "Titanium dioxide"},
-		{"Parfum (Fragrance)", "PARFUM"},
-		{"Butyrospermum Parkii Butter", "butyrospermum parkii  butter"},
-		{"Cetearyl Alcohol", "Cetearyl alcohol."},
-	}
-	for _, pair := range same {
-		if normalizeINCI(pair[0]) != normalizeINCI(pair[1]) {
-			t.Errorf("%q ve %q aynı maddeye çözülmedi: %q / %q",
-				pair[0], pair[1], normalizeINCI(pair[0]), normalizeINCI(pair[1]))
-		}
-	}
-}
-
-// Eşleştirme normalleştirmeden sonra TAM eşleşmedir. "Alcohol" ile
-// "Alcohol Denat." farklı maddelerdir; alt dize karşılaştırması bunları
-// birbirine karıştırıp yanlış içeriğe mevzuat bağlardı.
-func TestNormalizeINCIKeepsDistinctSubstancesApart(t *testing.T) {
-	different := [][2]string{
-		{"Alcohol", "Alcohol Denat."},
-		{"Benzyl Alcohol", "Benzyl Salicylate"},
-		{"Iron Oxides", "Zinc Oxide"},
-	}
-	for _, pair := range different {
-		if normalizeINCI(pair[0]) == normalizeINCI(pair[1]) {
-			t.Errorf("%q ve %q aynı maddeye çözüldü: %q", pair[0], pair[1], normalizeINCI(pair[0]))
-		}
-	}
-}
+// INCI adı normalleştirmesinin testleri inci paketinde: iki içe aktarım da
+// aynı işlevi kullanıyor.
 
 func TestNormalizeAnnex(t *testing.T) {
 	cases := map[string]string{
