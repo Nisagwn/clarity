@@ -204,15 +204,34 @@ var categoryLabels = map[string]string{
 	"en:lip-cosmetics":          "dudak ürünü",
 	"en:mouthwash":              "ağız gargarası",
 	"en:liquid-soaps":           "sıvı sabun",
+
+	// Katalogda sık geçen diğer raf kategorileri.
+	"en:body-creams":           "vücut kremi",
+	"en:body-oils":             "vücut yağı",
+	"en:face-masks":            "yüz maskesi",
+	"en:hair-masks":            "saç maskesi",
+	"en:hair-gel":              "saç jölesi",
+	"en:day-creams":            "gündüz kremi",
+	"en:roll-on-deodorants":    "roll-on deodorant",
+	"en:anti-perspirants":      "ter önleyici",
+	"en:whitening-toothpastes": "beyazlatıcı diş macunu",
+	"en:mouthwashes":           "ağız gargarası",
+	"en:aftershaves":           "tıraş sonrası",
+	"en:shaving":               "tıraş ürünleri",
+	"en:marseille-soaps":       "Marsilya sabunu",
+	"en:dermatological-soaps":  "dermatolojik sabun",
+	"en:showers-and-baths":     "duş ve banyo",
 }
 
 // ignoredCategories, kategori olmayan etiketler. Veri kümesinin kendi adı
 // ürünü tarif etmiyor; kategori diye gösterilirse süzgeç listesini kirletir.
 var ignoredCategories = map[string]bool{
-	"en:open-beauty-facts": true,
-	"en:products":          true,
-	"en:beauty-products":   true,
-	"en:cosmetics":         true,
+	"en:open-beauty-facts":  true,
+	"en:products":           true,
+	"en:beauty-products":    true,
+	"en:cosmetics":          true,
+	"en:non-food-products":  true, // veri kümesinin gıda dışı olduğunu söylüyor
+	"en:non-food-kitchenwa": true,
 }
 
 var tagPrefix = regexp.MustCompile(`^[a-z]{2}:`)

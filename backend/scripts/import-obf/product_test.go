@@ -236,6 +236,11 @@ func TestCategoryIgnoresDatasetTags(t *testing.T) {
 		t.Errorf("kategori %q, beklenen duş jeli", got)
 	}
 
+	// "gıda dışı ürünler" de ürünü tarif etmiyor, veri kümesini tarif ediyor.
+	if got := category([]string{"en:non-food-products", "en:toothpaste"}); got != "diş macunu" {
+		t.Errorf("kategori %q, beklenen diş macunu", got)
+	}
+
 	// Yalnızca kirli etiket varsa kategori boş kalır: uydurmaktansa boş.
 	if got := category([]string{"en:open-beauty-facts"}); got != "" {
 		t.Errorf("kategori %q, boş beklenirdi", got)
